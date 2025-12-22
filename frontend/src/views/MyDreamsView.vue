@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getDreamsList, deleteDream } from '../services/api'
+import { getDreamsList, deleteDream, getDreamDetail } from '../services/api'
 
 const router = useRouter()
 
@@ -165,9 +165,26 @@ const createNewDream = () => {
 }
 
 // 显示梦境详情
-const showDreamDetails = (dream) => {
-  selectedDream.value = dream
-  showDreamDetail.value = true
+const showDreamDetails = async (dream) => {
+  try {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      router.push('/')
+      return
+    }
+
+    // 获取完整的梦境详情
+    const response = await getDreamDetail(dream.DreamID, token)
+    if (response.Code === 200 && response.Data) {
+      selectedDream.value = response.Data
+      showDreamDetail.value = true
+    } else {
+      alert(`获取梦境详情失败: ${response.Msg}`)
+    }
+  } catch (error) {
+    console.error('获取梦境详情失败:', error)
+    alert('获取梦境详情失败，请稍后重试')
+  }
 }
 
 // 关闭梦境详情
@@ -316,7 +333,7 @@ onMounted(() => {
     </main>
 
     <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click="cancelDelete">
+    <div v-if="showDeleteConfirm" class="delete-modal-overlay" @click="cancelDelete">
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2 class="modal-title">确认删除</h2>
@@ -365,6 +382,36 @@ onMounted(() => {
               <h3 class="section-title">梦境内容</h3>
               <div class="detail-content">
                 {{ selectedDream.Content }}
+              </div>
+            </div>
+
+            <!-- 情绪标签 -->
+            <div v-if="selectedDream.Emotions && selectedDream.Emotions.length > 0" class="detail-section">
+              <h3 class="section-title">情绪标签</h3>
+              <div class="emotion-tags">
+                <span
+                  v-for="emotion in selectedDream.Emotions"
+                  :key="emotion.EmotionID"
+                  class="emotion-tag"
+                  :style="{ backgroundColor: emotion.Color }"
+                >
+                  {{ emotion.EmotionName }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 梦境类型 -->
+            <div v-if="selectedDream.DreamTypes && selectedDream.DreamTypes.length > 0" class="detail-section">
+              <h3 class="section-title">梦境类型</h3>
+              <div class="type-tags">
+                <span
+                  v-for="type in selectedDream.DreamTypes"
+                  :key="type.TypeID"
+                  class="type-tag"
+                  :style="{ backgroundColor: type.Color }"
+                >
+                  {{ type.TypeName }}
+                </span>
               </div>
             </div>
 
@@ -770,6 +817,21 @@ onMounted(() => {
 }
 
 /* 删除确认弹窗 */
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: var(--space-4);
+}
+
+/* 梦境详情弹窗和通用弹窗 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -780,7 +842,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1000;
   padding: var(--space-4);
 }
 
@@ -996,6 +1058,25 @@ onMounted(() => {
   flex: 1;
   justify-content: center;
   gap: var(--space-2);
+}
+
+/* 情绪和类型标签 */
+.emotion-tags,
+.type-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.emotion-tag,
+.type-tag {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: white;
+  background: var(--primary-600);
 }
 
 /* 详情弹窗响应式设计 */

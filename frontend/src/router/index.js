@@ -40,6 +40,11 @@ const routes = [
     path: '/main/profile',
     name: 'Profile',
     component: ProfileView
+  },
+  {
+    path: '/edit-dream/:id',
+    name: 'EditDream',
+    component: CreateDreamView
   }
 ]
 

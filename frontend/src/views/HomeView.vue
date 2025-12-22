@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getUserInfo } from '../services/api'
+import { getUserInfo, getUserStatistics } from '../services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,6 +22,14 @@ const userInfo = ref({
   username: '用户名',
   email: 'user@example.com',
   avatar: null
+})
+
+// 统计数据
+const statistics = ref({
+  totalDreams: 0,
+  totalAnalyses: 0,
+  monthlyDreams: 0,
+  recentDreams: []
 })
 
 // 获取用户信息
@@ -71,6 +79,37 @@ const fetchUserInfo = async () => {
   }
 }
 
+// 获取统计数据
+const fetchStatistics = async () => {
+  try {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      statistics.value = {
+        totalDreams: 0,
+        totalAnalyses: 0,
+        monthlyDreams: 0,
+        recentDreams: []
+      }
+      return
+    }
+
+    const response = await getUserStatistics(token)
+
+    if (response.Code === 200 && response.Data) {
+      statistics.value = {
+        totalDreams: response.Data.totalDreams || 0,
+        totalAnalyses: response.Data.totalAnalyses || 0,
+        monthlyDreams: response.Data.monthlyDreams || 0,
+        recentDreams: response.Data.recentDreams || []
+      }
+    } else {
+      console.error('获取统计数据失败:', response.Msg)
+    }
+  } catch (error) {
+    console.error('获取统计数据异常:', error)
+  }
+}
+
 // 处理导航点击
 const handleNavClick = (item) => {
   activeItem.value = item.name
@@ -107,6 +146,17 @@ const handleClickOutside = (event) => {
   }
 }
 
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
 onMounted(async () => {
   const currentPath = route.path
   const currentItem = navItems.value.find(item => item.path === currentPath)
@@ -115,6 +165,7 @@ onMounted(async () => {
   }
 
   await fetchUserInfo()
+  await fetchStatistics()
   document.addEventListener('click', handleClickOutside)
 })
 
@@ -215,7 +266,7 @@ onUnmounted(() => {
               <span>📖</span>
             </div>
             <div class="stat-content">
-              <div class="stat-value">0</div>
+              <div class="stat-value">{{ statistics.totalDreams }}</div>
               <div class="stat-label">梦境总数</div>
             </div>
           </div>
@@ -225,7 +276,7 @@ onUnmounted(() => {
               <span>📊</span>
             </div>
             <div class="stat-content">
-              <div class="stat-value">0</div>
+              <div class="stat-value">{{ statistics.totalAnalyses }}</div>
               <div class="stat-label">分析报告</div>
             </div>
           </div>
@@ -235,7 +286,7 @@ onUnmounted(() => {
               <span>📈</span>
             </div>
             <div class="stat-content">
-              <div class="stat-value">0</div>
+              <div class="stat-value">{{ statistics.monthlyDreams }}</div>
               <div class="stat-label">本月记录</div>
             </div>
           </div>
@@ -245,7 +296,23 @@ onUnmounted(() => {
         <div class="recent-dreams-section">
           <h2 class="section-title">最近梦境</h2>
           <div class="recent-dreams">
-            <div class="empty-state">
+            <div v-if="statistics.recentDreams && statistics.recentDreams.length > 0" class="recent-dreams-list">
+              <div
+                v-for="dream in statistics.recentDreams"
+                :key="dream.DreamID"
+                class="recent-dream-card spa-card"
+              >
+                <div class="dream-header">
+                  <h3 class="dream-title">{{ dream.Title }}</h3>
+                  <span class="dream-date">{{ formatDate(dream.DreamDate) }}</span>
+                </div>
+                <p class="dream-preview">{{ dream.ContentPreview }}...</p>
+                <router-link :to="`/main/my-dreams`" class="view-more-link">
+                  查看详情 →
+                </router-link>
+              </div>
+            </div>
+            <div v-else class="empty-state">
               <div class="empty-icon">🌙</div>
               <h3 class="empty-title">还没有梦境记录</h3>
               <p class="empty-description">开始记录你的第一个梦境吧</p>
@@ -625,6 +692,68 @@ onUnmounted(() => {
   font-size: var(--text-base);
   color: var(--neutral-600);
   margin: 0 0 var(--space-6) 0;
+}
+
+/* 最近梦境列表 */
+.recent-dreams-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.recent-dream-card {
+  padding: var(--space-5);
+  transition: var(--transition-base);
+}
+
+.recent-dream-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.dream-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.dream-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--neutral-900);
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
+  margin-right: var(--space-3);
+}
+
+.dream-date {
+  font-size: var(--text-sm);
+  color: var(--neutral-500);
+  white-space: nowrap;
+}
+
+.dream-preview {
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+  line-height: 1.5;
+  margin: 0 0 var(--space-4) 0;
+}
+
+.view-more-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary-600);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: var(--transition-base);
+}
+
+.view-more-link:hover {
+  color: var(--primary-700);
+  transform: translateX(2px);
 }
 
 /* 响应式设计 */

@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.status import Status
 from sql.database import get_db
-from sql.DreamSql import DreamCreate, DreamGetList, DreamGetDetail
+from sql.DreamSql import DreamCreate, DreamGetList, DreamGetDetail, DreamUpdate, DreamDelete
 from sql.EmotionTypeSql import GetAllEmotions, GetAllDreamTypes
 from sql.LogSql import LogDreamRecordSuccess, LogDreamRecordFailed, LogDreamUpdate, GetClientIP, GetUserAgent
 
@@ -301,4 +301,130 @@ def get_dream_types():
 
     except Exception as e:
         print(f"获取梦境类型列表异常: {str(e)}")
+        return jsonify(Status.ErrorRequest.ToResponse(str(e)))
+
+@dream_bp.route('/Update/<int:dream_id>', methods=['PUT','OPTIONS'])
+@jwt_required()
+def update_dream(dream_id):
+    """更新梦境记录"""
+    try:
+        # 获取数据库连接
+        connection = getattr(request, 'connection', None)
+        if isinstance(connection, Status):
+            return jsonify(connection.ToResponse())
+
+        # 获取当前用户信息
+        current_email = get_jwt_identity()
+        if not current_email:
+            return jsonify(Status.AuthFailed.ToResponse("未找到用户信息"))
+
+        # 查询用户ID
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT UserID FROM Users WHERE Email = %s", (current_email,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                return jsonify(Status.UserUnexist.ToResponse())
+
+            user_id = user_result['UserID']
+
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify(Status.ErrorRequest.ToResponse("请求体不能为空"))
+
+        # 可选字段更新
+        title = data.get('Title', '').strip() if data.get('Title') else None
+        content = data.get('Content', '').strip() if data.get('Content') else None
+        dream_date = data.get('DreamDate')
+        sleep_quality = data.get('SleepQuality')
+        lucidity_level = data.get('LucidityLevel')
+        is_public = data.get('IsPublic')
+
+        # 数据验证
+        if title is not None:
+            if len(title) < 1:
+                return jsonify(Status.ErrorRequest.ToResponse("梦境标题不能为空"))
+            if len(title) > 100:
+                return jsonify(Status.ErrorRequest.ToResponse("梦境标题不能超过100个字符"))
+
+        if content is not None:
+            if len(content) < 10:
+                return jsonify(Status.ErrorRequest.ToResponse("梦境内容至少需要10个字符"))
+            if len(content) > 2000:
+                return jsonify(Status.ErrorRequest.ToResponse("梦境内容不能超过2000个字符"))
+
+        # 验证数值范围
+        if sleep_quality is not None and not (1 <= sleep_quality <= 5):
+            return jsonify(Status.ErrorRequest.ToResponse("睡眠质量必须在1-5之间"))
+
+        if lucidity_level is not None and not (1 <= lucidity_level <= 5):
+            return jsonify(Status.ErrorRequest.ToResponse("梦境清晰度必须在1-5之间"))
+
+        # 验证日期格式
+        dream_date_obj = None
+        if dream_date:
+            try:
+                from datetime import datetime
+                dream_date_obj = datetime.strptime(dream_date, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify(Status.ErrorRequest.ToResponse("日期格式不正确，请使用YYYY-MM-DD格式"))
+
+        # 更新梦境记录
+        update_status = DreamUpdate(
+            connection,
+            dream_id=dream_id,
+            user_id=user_id,
+            title=title,
+            content=content,
+            dream_date=dream_date_obj,
+            sleep_quality=sleep_quality,
+            lucidity_level=lucidity_level,
+            is_public=is_public
+        )
+
+        if update_status == Status.OK:
+            response = Status.OK.ToResponse("梦境更新成功")
+            return jsonify(response)
+        else:
+            return jsonify(update_status.ToResponse())
+
+    except Exception as e:
+        print(f"更新梦境异常: {str(e)}")
+        return jsonify(Status.ErrorRequest.ToResponse(str(e)))
+
+@dream_bp.route('/Delete/<int:dream_id>', methods=['DELETE','OPTIONS'])
+@jwt_required()
+def delete_dream(dream_id):
+    """删除梦境记录"""
+    try:
+        # 获取数据库连接
+        connection = getattr(request, 'connection', None)
+        if isinstance(connection, Status):
+            return jsonify(connection.ToResponse())
+
+        # 获取当前用户信息
+        current_email = get_jwt_identity()
+        if not current_email:
+            return jsonify(Status.AuthFailed.ToResponse("未找到用户信息"))
+
+        # 查询用户ID
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT UserID FROM Users WHERE Email = %s", (current_email,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                return jsonify(Status.UserUnexist.ToResponse())
+
+            user_id = user_result['UserID']
+
+        # 删除梦境记录
+        delete_status = DreamDelete(connection, dream_id, user_id)
+
+        if delete_status == Status.OK:
+            response = Status.OK.ToResponse("梦境删除成功")
+            return jsonify(response)
+        else:
+            return jsonify(delete_status.ToResponse())
+
+    except Exception as e:
+        print(f"删除梦境异常: {str(e)}")
         return jsonify(Status.ErrorRequest.ToResponse(str(e)))

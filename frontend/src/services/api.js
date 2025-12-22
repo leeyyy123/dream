@@ -17,6 +17,7 @@ export const USER_ENDPOINTS = {
   GET_INFO: `${API_BASE_URL}/User/GetInfo`,
   UPDATE_INFO: `${API_BASE_URL}/User/UpdateInfo`,
   UPLOAD_AVATAR: `${API_BASE_URL}/User/UploadAvatar`,
+  GET_STATISTICS: `${API_BASE_URL}/User/GetStatistics`,
 }
 
 // Dream API endpoints
@@ -174,6 +175,23 @@ export async function checkToken(token) {
  */
 export async function getUserInfo(token) {
   const response = await fetch(USER_ENDPOINTS.GET_INFO, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * Get user statistics data
+ * @param {string} token - JWT token
+ * @returns {Promise} - User statistics response
+ */
+export async function getUserStatistics(token) {
+  const response = await fetch(USER_ENDPOINTS.GET_STATISTICS, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

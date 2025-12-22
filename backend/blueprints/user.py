@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.status import Status
 from sql.database import get_db
 from sql.UserSql import UserGetInfo
+from sql.StatisticsSql import GetDreamStatistics
 
 # Create blueprint
 user_bp = Blueprint('user', __name__, url_prefix='/User')
@@ -67,4 +68,45 @@ def get_user_info():
 
     except Exception as e:
         print(f"Get user info exception: {str(e)}")
+        return jsonify(Status.ErrorRequest.ToResponse(str(e)))
+
+@user_bp.route('/GetStatistics', methods=['GET','OPTIONS'])
+@jwt_required()
+def get_user_statistics():
+    """获取用户统计数据"""
+    try:
+        # 获取数据库连接
+        connection = getattr(request, 'connection', None)
+        if isinstance(connection, Status):
+            return jsonify(connection.ToResponse())
+
+        # 获取当前用户信息
+        current_email = get_jwt_identity()
+        if not current_email:
+            return jsonify(Status.AuthFailed.ToResponse("未找到用户信息"))
+
+        # 查询用户ID
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT UserID FROM Users WHERE Email = %s", (current_email,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                return jsonify(Status.UserUnexist.ToResponse())
+
+            user_id = user_result['UserID']
+
+        # 获取统计数据
+        statistics, status = GetDreamStatistics(connection, user_id)
+
+        if status == Status.OK:
+            response = {
+                "Code": 200,
+                "Msg": "获取统计数据成功",
+                "Data": statistics
+            }
+            return jsonify(response)
+        else:
+            return jsonify(status.ToResponse())
+
+    except Exception as e:
+        print(f"获取统计数据异常: {str(e)}")
         return jsonify(Status.ErrorRequest.ToResponse(str(e)))

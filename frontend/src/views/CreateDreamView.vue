@@ -1,9 +1,14 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { createDream, getEmotions, getDreamTypes } from '../services/api'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { createDream, getEmotions, getDreamTypes, getDreamDetail, updateDream } from '../services/api'
 
 const router = useRouter()
+const route = useRoute()
+
+// 判断是否为编辑模式
+const isEditMode = computed(() => route.name === 'EditDream')
+const dreamId = computed(() => route.params.id)
 
 // 表单数据
 const dreamForm = ref({
@@ -97,7 +102,7 @@ const setTodayDate = () => {
   dreamForm.value.dreamDate = today.toISOString().split('T')[0]
 }
 
-// 提交梦境
+// 提交梦境（创建或更新）
 const submitDream = async () => {
   if (!validateForm()) {
     return
@@ -124,13 +129,20 @@ const submitDream = async () => {
       DreamTypeIds: dreamForm.value.selectedDreamTypes
     }
 
-    const response = await createDream(payload, token)
+    let response
+    if (isEditMode.value) {
+      response = await updateDream(dreamId.value, payload, token)
+    } else {
+      response = await createDream(payload, token)
+    }
 
     if (response.Code === 200) {
-      alert('梦境记录成功！')
+      const action = isEditMode.value ? '更新' : '记录'
+      alert(`梦境${action}成功！`)
       router.push('/main/my-dreams')
     } else {
-      alert(`记录失败: ${response.Msg}`)
+      const action = isEditMode.value ? '更新' : '记录'
+      alert(`${action}失败: ${response.Msg}`)
     }
   } catch (error) {
     console.error('提交梦境失败:', error)
@@ -273,10 +285,57 @@ const getSelectedDreamTypeObjects = () => {
     .filter(type => dreamForm.value.selectedDreamTypes.includes(type.TypeID))
 }
 
+// 加载梦境详情（编辑模式）
+const loadDreamDetail = async () => {
+  if (!isEditMode.value) return
+
+  try {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      router.push('/')
+      return
+    }
+
+    const response = await getDreamDetail(dreamId.value, token)
+    if (response.Code === 200 && response.Data) {
+      const data = response.Data
+      dreamForm.value = {
+        title: data.Title || '',
+        content: data.Content || '',
+        dreamDate: formatDateForInput(data.DreamDate),
+        sleepQuality: data.SleepQuality || 3,
+        lucidityLevel: data.LucidityLevel || 3,
+        isPublic: data.IsPublic || false,
+        selectedEmotions: data.Emotions?.map(e => e.EmotionID) || [],
+        selectedDreamTypes: data.DreamTypes?.map(t => t.TypeID) || []
+      }
+    } else {
+      alert(`获取梦境详情失败: ${response.Msg}`)
+      router.push('/main/my-dreams')
+    }
+  } catch (error) {
+    console.error('获取梦境详情失败:', error)
+    alert('获取梦境详情失败，请稍后重试')
+    router.push('/main/my-dreams')
+  }
+}
+
+// 格式化日期为YYYY-MM-DD
+const formatDateForInput = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toISOString().split('T')[0]
+}
+
 // 组件挂载时设置默认日期和加载数据
 onMounted(() => {
-  setTodayDate()
-  loadEmotionsAndTypes()
+  if (isEditMode.value) {
+    loadDreamDetail()
+    loadEmotionsAndTypes()
+  } else {
+    setTodayDate()
+    loadEmotionsAndTypes()
+  }
 })
 </script>
 
@@ -290,7 +349,7 @@ onMounted(() => {
             ←
             <span>返回</span>
           </button>
-          <h1 class="page-title">记录梦境</h1>
+          <h1 class="page-title">{{ isEditMode ? '编辑梦境' : '记录梦境' }}</h1>
           <div class="header-spacer"></div>
         </div>
       </div>
@@ -299,6 +358,11 @@ onMounted(() => {
     <!-- 主要内容 -->
     <main class="main-content">
       <div class="container">
+        <!-- 编辑模式提示 -->
+        <div v-if="isEditMode && !isLoadingData" class="edit-notice">
+          <span>📝 你正在编辑梦境记录</span>
+        </div>
+
         <div class="form-card">
           <!-- 梦境标题 -->
           <div class="form-section">
@@ -497,7 +561,7 @@ onMounted(() => {
               @click="submitDream"
               :disabled="isSubmitting"
             >
-              {{ isSubmitting ? '记录中...' : '记录梦境' }}
+              {{ isSubmitting ? (isEditMode ? '更新中...' : '记录中...') : (isEditMode ? '更新梦境' : '记录梦境') }}
             </button>
           </div>
         </div>
@@ -581,6 +645,18 @@ onMounted(() => {
 .create-dream-container {
   min-height: 100vh;
   background: var(--neutral-50);
+}
+
+/* 编辑模式提示 */
+.edit-notice {
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--primary-700);
 }
 
 /* 头部样式 */
