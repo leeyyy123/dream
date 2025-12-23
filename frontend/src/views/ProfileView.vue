@@ -2,6 +2,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserInfo, updateUserInfo, uploadAvatar } from '../services/api'
+import {
+  ArrowLeft,
+  User,
+  Edit,
+  Camera
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -267,12 +273,12 @@ onMounted(() => {
       <div class="container">
         <div class="header-content">
           <button class="back-button" @click="goBack">
-            ←
+            <component :is="ArrowLeft" class="back-icon" />
             <span>返回</span>
           </button>
           <h1 class="page-title">个人信息</h1>
-          <button v-if="!editing" class="btn-primary" @click="startEditing">
-            ✏️
+          <button v-if="!editing" class="spa-button-primary" @click="startEditing">
+            <component :is="Edit" class="btn-icon" />
             <span>编辑</span>
           </button>
         </div>
@@ -283,10 +289,10 @@ onMounted(() => {
     <main class="main-content">
       <div class="container">
         <!-- 成功/错误消息 -->
-        <div v-if="success" class="success-message">
+        <div v-if="success" class="alert alert-success">
           {{ success }}
         </div>
-        <div v-if="error" class="error-message">
+        <div v-if="error" class="alert alert-error">
           {{ error }}
         </div>
 
@@ -308,7 +314,7 @@ onMounted(() => {
                 class="avatar-img"
               />
               <div v-else class="default-avatar">
-                👤
+                <component :is="User" class="default-avatar-icon" />
               </div>
 
               <!-- 头像上传按钮 -->
@@ -319,7 +325,7 @@ onMounted(() => {
                   @change="handleAvatarUpload"
                   :disabled="uploading"
                 />
-                📷
+                <component :is="Camera" class="camera-icon" />
               </label>
             </div>
             <h2 class="username">{{ userInfo.userName || '未设置用户名' }}</h2>
@@ -327,7 +333,7 @@ onMounted(() => {
           </div>
 
           <!-- 信息卡片 -->
-          <div class="info-card" style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div class="info-card spa-card">
             <div class="card-header">
               <h3 class="card-title">基本信息</h3>
             </div>
@@ -379,7 +385,7 @@ onMounted(() => {
                     <input
                       v-model="editForm.userName"
                       type="text"
-                      class="form-input"
+                      class="form-input spa-input"
                       placeholder="请输入用户名"
                       maxlength="50"
                     />
@@ -389,7 +395,7 @@ onMounted(() => {
                     <label class="form-label">邮箱</label>
                     <input
                       type="email"
-                      class="form-input"
+                      class="form-input spa-input"
                       :value="userInfo.email"
                       disabled
                       style="background: var(--neutral-100); color: var(--neutral-500);"
@@ -415,7 +421,7 @@ onMounted(() => {
                     <input
                       v-model="editForm.birthDate"
                       type="date"
-                      class="form-input"
+                      class="form-input spa-input"
                       :max="new Date().toISOString().split('T')[0]"
                     />
                   </div>
@@ -425,7 +431,7 @@ onMounted(() => {
                     <input
                       v-model="editForm.phone"
                       type="tel"
-                      class="form-input"
+                      class="form-input spa-input"
                       placeholder="请输入手机号"
                       maxlength="11"
                     />
@@ -435,7 +441,7 @@ onMounted(() => {
                     <label class="form-label">地址</label>
                     <textarea
                       v-model="editForm.address"
-                      class="form-input textarea"
+                      class="form-input spa-input spa-textarea"
                       placeholder="请输入地址"
                       rows="3"
                       maxlength="200"
@@ -447,7 +453,7 @@ onMounted(() => {
                 <div class="form-actions">
                   <button
                     type="button"
-                    class="btn-secondary"
+                    class="spa-button-secondary"
                     @click="cancelEditing"
                     :disabled="saving"
                   >
@@ -455,7 +461,7 @@ onMounted(() => {
                   </button>
                   <button
                     type="submit"
-                    class="btn-primary"
+                    class="spa-button-primary"
                     :disabled="saving"
                   >
                     {{ saving ? '保存中...' : '保存' }}
@@ -473,106 +479,37 @@ onMounted(() => {
 <style scoped>
 /* 基础样式 */
 .container {
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 0 20px;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary:hover {
-  background: #5a67d8;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #f8f8f8;
-  color: #333;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s;
-}
-
-.btn-secondary:hover {
-  background: #e8e8e8;
-}
-
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.form-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
-  box-sizing: border-box;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.form-input.textarea {
-  resize: vertical;
-  min-height: 80px;
-  font-family: inherit;
-  line-height: 1.5;
-}
-
-.profile-container {
-  min-height: 100vh;
-  background: #f5f5f5;
+  padding: 0 var(--space-6);
 }
 
 /* 头部样式 */
 .header {
   background: white;
   border-bottom: 1px solid var(--border-color);
-  padding: 24px 0;
+  padding: var(--space-6) 0;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .back-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: var(--space-3) 16px;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-3);
   background: transparent;
   border: none;
   border-radius: var(--radius-lg);
   color: var(--neutral-700);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .back-button:hover {
@@ -580,44 +517,99 @@ onMounted(() => {
   color: var(--neutral-900);
 }
 
+.back-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .page-title {
-  font-size: var(--text-3xl);
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   color: var(--neutral-900);
   margin: 0;
   flex: 1;
+  letter-spacing: var(--tracking-tight);
 }
 
+.btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* 按钮样式 */
 .spa-button-primary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-5);
+  background: var(--neutral-900);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-base);
+}
+
+.spa-button-primary:hover {
+  background: var(--neutral-800);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.spa-button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.spa-button-secondary {
+  padding: var(--space-2_5) var(--space-5);
+  background: white;
+  color: var(--neutral-700);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-base);
+}
+
+.spa-button-secondary:hover {
+  background: var(--neutral-50);
+  border-color: var(--border-color-hover);
+  color: var(--neutral-900);
+}
+
+.spa-button-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 主内容区域 */
 .main-content {
-  padding: 32px 0;
+  padding: var(--space-8) 0;
 }
 
 /* 成功/错误消息 */
-.success-message {
-  background: var(--success-50);
-  color: var(--success-600);
-  padding: 16px;
+.alert {
+  padding: var(--space-4);
   border-radius: var(--radius-lg);
   text-align: center;
-  margin-bottom: 24px;
-  font-weight: 500;
+  margin-bottom: var(--space-6);
+  font-weight: var(--font-medium);
 }
 
-.error-message {
+.alert-success {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.alert-error {
   background: var(--error-50);
   color: var(--error-600);
-  padding: 16px;
-  border-radius: var(--radius-lg);
-  text-align: center;
-  margin-bottom: 24px;
-  font-weight: 500;
 }
 
 /* 加载状态 */
@@ -626,17 +618,17 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-20) 16px;
+  padding: var(--space-20) var(--space-4);
   color: var(--neutral-500);
   font-size: var(--text-lg);
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border: 3px solid var(--neutral-200);
-  border-top: 3px solid var(--primary-500);
+  border-top: 3px solid var(--neutral-900);
   border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
 }
@@ -648,7 +640,7 @@ onMounted(() => {
 
 /* 个人资料内容 */
 .profile-content {
-  max-width: 800px;
+  max-width: 700px;
   margin: 0 auto;
 }
 
@@ -661,7 +653,7 @@ onMounted(() => {
 .avatar-container {
   position: relative;
   display: inline-block;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .avatar-img {
@@ -681,9 +673,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--neutral-400);
   border: 4px solid white;
   box-shadow: var(--shadow-lg);
+}
+
+.default-avatar-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--neutral-400);
 }
 
 .avatar-upload {
@@ -692,7 +689,7 @@ onMounted(() => {
   right: 0;
   width: 36px;
   height: 36px;
-  background: var(--primary-500);
+  background: var(--neutral-900);
   color: white;
   border-radius: var(--radius-full);
   display: flex;
@@ -705,7 +702,7 @@ onMounted(() => {
 }
 
 .avatar-upload:hover {
-  background: var(--primary-600);
+  background: var(--neutral-800);
   transform: scale(1.1);
 }
 
@@ -718,11 +715,16 @@ onMounted(() => {
   display: none;
 }
 
+.camera-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .username {
   font-size: var(--text-2xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--neutral-900);
-  margin: 0 0 4px 0;
+  margin: 0 0 var(--space-1) 0;
 }
 
 .email {
@@ -733,43 +735,44 @@ onMounted(() => {
 
 /* 信息卡片 */
 .info-card {
-  background: white;
-  border-radius: var(--radius-2xl);
+  padding: 0;
+  border: 1px solid var(--border-color);
   overflow: hidden;
 }
 
 .card-header {
-  padding: 24px 32px;
+  padding: var(--space-6) var(--space-8);
   border-bottom: 1px solid var(--border-color);
   background: var(--neutral-50);
 }
 
 .card-title {
   font-size: var(--text-lg);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
   margin: 0;
 }
 
 .card-content {
-  padding: 32px;
+  padding: var(--space-8);
 }
 
 /* 只读模式 - 信息网格 */
 .info-grid {
   display: grid;
-  gap: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-8);
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .info-label {
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   color: var(--neutral-600);
 }
 
@@ -777,7 +780,7 @@ onMounted(() => {
   font-size: var(--text-base);
   color: var(--neutral-900);
   margin: 0;
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 /* 编辑模式 - 表单 */
@@ -787,44 +790,55 @@ onMounted(() => {
 
 .form-grid {
   display: grid;
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-6);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .form-label {
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-semibold);
   color: var(--neutral-700);
 }
 
-.spa-input {
+.form-input {
+  width: 100%;
+  padding: var(--space-2_5) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   font-size: var(--text-base);
 }
 
-.spa-input.textarea {
+.form-input:focus {
+  outline: none;
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 3px rgb(100 116 139 / 0.1);
+}
+
+.spa-textarea {
   resize: vertical;
   min-height: 80px;
   font-family: inherit;
-  line-height: 1.5;
+  line-height: var(--leading-relaxed);
 }
 
 .form-help {
   font-size: var(--text-xs);
   color: var(--neutral-500);
-  margin: 4px 0 0 0;
+  margin: 0;
 }
 
 /* 操作按钮 */
 .form-actions {
   display: flex;
-  gap: 16px;
+  gap: var(--space-3);
   justify-content: flex-end;
-  padding-top: 32px;
+  padding-top: var(--space-8);
   border-top: 1px solid var(--border-color);
 }
 
@@ -832,13 +846,13 @@ onMounted(() => {
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
     align-items: stretch;
   }
 
   .page-title {
     text-align: center;
-    font-size: var(--text-2xl);
+    font-size: var(--text-xl);
   }
 
   .avatar-img,
@@ -847,32 +861,43 @@ onMounted(() => {
     height: 100px;
   }
 
+  .default-avatar-icon {
+    width: 40px;
+    height: 40px;
+  }
+
   .username {
     font-size: var(--text-xl);
   }
 
   .card-header,
   .card-content {
-    padding: 24px;
+    padding: var(--space-6);
   }
 
   .form-actions {
     flex-direction: column;
   }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
 }
 
 @media (max-width: 480px) {
   .avatar-section {
-    margin-bottom: 32px;
+    margin-bottom: var(--space-8);
   }
 
   .card-header,
   .card-content {
-    padding: 16px;
+    padding: var(--space-5);
   }
 
   .form-grid {
-    gap: 16px;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
   }
 }
 </style>

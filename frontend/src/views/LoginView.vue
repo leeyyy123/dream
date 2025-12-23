@@ -2,6 +2,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login, signUp } from '../services/api'
+import {
+  DocumentAdd,
+  DataAnalysis,
+  TrendCharts,
+  Moon,
+  User,
+  Lock
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -38,7 +46,7 @@ const handleLogin = async () => {
           localStorage.setItem('isAdmin', 'false')
         }
       }
-      router.push('/main')
+      router.push('/main/home')
     } else {
       alert(`登录失败: ${response.Msg}`)
     }
@@ -82,21 +90,27 @@ const register = async () => {
     <div class="brand-section">
       <div class="brand-content">
         <div class="logo-wrapper">
-          <div class="logo-text">D</div>
+          <component :is="Moon" class="logo-icon" />
         </div>
         <h1 class="brand-title">Dream</h1>
         <p class="brand-subtitle">专业梦境记录与分析平台</p>
         <div class="features">
           <div class="feature-item">
-            <div class="feature-icon">📝</div>
+            <div class="feature-icon">
+              <component :is="DocumentAdd" />
+            </div>
             <span>智能记录梦境</span>
           </div>
           <div class="feature-item">
-            <div class="feature-icon">🧠</div>
+            <div class="feature-icon">
+              <component :is="DataAnalysis" />
+            </div>
             <span>深度心理分析</span>
           </div>
           <div class="feature-item">
-            <div class="feature-icon">📊</div>
+            <div class="feature-icon">
+              <component :is="TrendCharts" />
+            </div>
             <span>可视化数据报告</span>
           </div>
         </div>
@@ -126,26 +140,32 @@ const register = async () => {
         <form v-if="activeTab === 'login'" @submit.prevent="handleLogin" class="form">
           <div class="form-group">
             <label for="login-email" class="form-label">邮箱地址</label>
-            <input
-              id="login-email"
-              v-model="loginForm.email"
-              type="email"
-              required
-              placeholder="请输入邮箱地址"
-              class="spa-input"
-            />
+            <div class="input-with-icon">
+              <component :is="User" class="input-icon" />
+              <input
+                id="login-email"
+                v-model="loginForm.email"
+                type="email"
+                required
+                placeholder="请输入邮箱地址"
+                class="spa-input"
+              />
+            </div>
           </div>
 
           <div class="form-group">
             <label for="login-password" class="form-label">密码</label>
-            <input
-              id="login-password"
-              v-model="loginForm.password"
-              type="password"
-              required
-              placeholder="请输入密码"
-              class="spa-input"
-            />
+            <div class="input-with-icon">
+              <component :is="Lock" class="input-icon" />
+              <input
+                id="login-password"
+                v-model="loginForm.password"
+                type="password"
+                required
+                placeholder="请输入密码"
+                class="spa-input"
+              />
+            </div>
           </div>
 
           <button type="submit" class="spa-button-primary submit-button">
@@ -157,50 +177,62 @@ const register = async () => {
         <form v-else-if="activeTab === 'register'" @submit.prevent="register" class="form">
           <div class="form-group">
             <label for="register-name" class="form-label">用户名</label>
-            <input
-              id="register-name"
-              v-model="registerForm.name"
-              type="text"
-              required
-              placeholder="请输入用户名"
-              class="spa-input"
-            />
+            <div class="input-with-icon">
+              <component :is="User" class="input-icon" />
+              <input
+                id="register-name"
+                v-model="registerForm.name"
+                type="text"
+                required
+                placeholder="请输入用户名"
+                class="spa-input"
+              />
+            </div>
           </div>
 
           <div class="form-group">
             <label for="register-email" class="form-label">邮箱地址</label>
-            <input
-              id="register-email"
-              v-model="registerForm.email"
-              type="email"
-              required
-              placeholder="请输入邮箱地址"
-              class="spa-input"
-            />
+            <div class="input-with-icon">
+              <component :is="User" class="input-icon" />
+              <input
+                id="register-email"
+                v-model="registerForm.email"
+                type="email"
+                required
+                placeholder="请输入邮箱地址"
+                class="spa-input"
+              />
+            </div>
           </div>
 
           <div class="form-group">
             <label for="register-password" class="form-label">密码</label>
-            <input
-              id="register-password"
-              v-model="registerForm.password"
-              type="password"
-              required
-              placeholder="请输入密码"
-              class="spa-input"
-            />
+            <div class="input-with-icon">
+              <component :is="Lock" class="input-icon" />
+              <input
+                id="register-password"
+                v-model="registerForm.password"
+                type="password"
+                required
+                placeholder="请输入密码"
+                class="spa-input"
+              />
+            </div>
           </div>
 
           <div class="form-group">
             <label for="confirm-password" class="form-label">确认密码</label>
-            <input
-              id="confirm-password"
-              v-model="registerForm.confirmPassword"
-              type="password"
-              required
-              placeholder="请再次输入密码"
-              class="spa-input"
-            />
+            <div class="input-with-icon">
+              <component :is="Lock" class="input-icon" />
+              <input
+                id="confirm-password"
+                v-model="registerForm.confirmPassword"
+                type="password"
+                required
+                placeholder="请再次输入密码"
+                class="spa-input"
+              />
+            </div>
           </div>
 
           <button type="submit" class="spa-button-primary submit-button">
@@ -262,27 +294,26 @@ const register = async () => {
   margin-bottom: var(--space-6);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
-.logo-text {
-  font-size: 48px;
-  font-weight: 700;
-  color: white;
-  letter-spacing: -2px;
+.logo-icon {
+  width: 48px;
+  height: 48px;
 }
 
 .brand-title {
   font-size: var(--text-4xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   margin: 0 0 var(--space-4) 0;
-  letter-spacing: -1px;
+  letter-spacing: var(--tracking-tight);
 }
 
 .brand-subtitle {
   font-size: var(--text-lg);
   color: rgba(255, 255, 255, 0.8);
   margin: 0 0 var(--space-12) 0;
-  font-weight: 400;
+  font-weight: var(--font-regular);
 }
 
 .features {
@@ -300,7 +331,6 @@ const register = async () => {
 }
 
 .feature-icon {
-  font-size: var(--text-xl);
   width: 40px;
   height: 40px;
   background: rgba(255, 255, 255, 0.1);
@@ -310,6 +340,12 @@ const register = async () => {
   justify-content: center;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.feature-icon > * {
+  width: 20px;
+  height: 20px;
 }
 
 /* 右侧登录区域 */
@@ -344,7 +380,7 @@ const register = async () => {
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   color: var(--neutral-600);
   cursor: pointer;
   transition: var(--transition-base);
@@ -352,7 +388,7 @@ const register = async () => {
 
 .tab-button.active {
   background: white;
-  color: var(--primary-700);
+  color: var(--neutral-900);
   box-shadow: var(--shadow-sm);
 }
 
@@ -372,18 +408,74 @@ const register = async () => {
 .form-label {
   display: block;
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-semibold);
   color: var(--neutral-700);
   margin-bottom: var(--space-2);
+}
+
+.input-with-icon {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--neutral-400);
+}
+
+.input-with-icon .spa-input {
+  padding-left: var(--space-10);
+}
+
+.spa-input {
+  width: 100%;
+  padding: var(--space-2_5) var(--space-3);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  color: var(--neutral-900);
+  transition: all var(--transition-fast);
+}
+
+.spa-input:focus {
+  outline: none;
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 3px rgb(100 116 139 / 0.1);
+}
+
+.spa-input::placeholder {
+  color: var(--neutral-400);
 }
 
 .submit-button {
   width: 100%;
   padding: var(--space-4);
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   margin-top: var(--space-8);
+  display: flex;
+  align-items: center;
   justify-content: center;
+}
+
+.spa-button-primary {
+  background: var(--neutral-900);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.spa-button-primary:hover {
+  background: var(--neutral-800);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* 响应式设计 */
@@ -431,7 +523,11 @@ const register = async () => {
   .feature-icon {
     width: 36px;
     height: 36px;
-    font-size: var(--text-lg);
+  }
+
+  .feature-icon > * {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -448,6 +544,11 @@ const register = async () => {
     width: 80px;
     height: 80px;
     margin-bottom: var(--space-4);
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
   }
 
   .brand-title {

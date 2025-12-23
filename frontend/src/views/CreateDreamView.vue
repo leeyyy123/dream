@@ -2,6 +2,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { createDream, getEmotions, getDreamTypes, getDreamDetail, updateDream } from '../services/api'
+import {
+  ArrowLeft,
+  Close,
+  Star,
+  Moon
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -346,7 +352,7 @@ onMounted(() => {
       <div class="container">
         <div class="header-content">
           <button class="back-button" @click="goBack">
-            ←
+            <component :is="ArrowLeft" class="back-icon" />
             <span>返回</span>
           </button>
           <h1 class="page-title">{{ isEditMode ? '编辑梦境' : '记录梦境' }}</h1>
@@ -360,7 +366,8 @@ onMounted(() => {
       <div class="container">
         <!-- 编辑模式提示 -->
         <div v-if="isEditMode && !isLoadingData" class="edit-notice">
-          <span>📝 你正在编辑梦境记录</span>
+          <component :is="Moon" class="notice-icon" />
+          <span>你正在编辑梦境记录</span>
         </div>
 
         <div class="form-card">
@@ -371,7 +378,7 @@ onMounted(() => {
               <input
                 v-model="dreamForm.title"
                 type="text"
-                class="form-input"
+                class="form-input spa-input"
                 :class="{ 'input-error': formErrors.title }"
                 placeholder="给你的梦境起个标题..."
                 maxlength="100"
@@ -387,7 +394,7 @@ onMounted(() => {
               <input
                 v-model="dreamForm.dreamDate"
                 type="date"
-                class="form-input"
+                class="form-input spa-input"
                 :class="{ 'input-error': formErrors.dreamDate }"
                 :max="new Date().toISOString().split('T')[0]"
               />
@@ -403,7 +410,7 @@ onMounted(() => {
               <label class="form-label">梦境内容 <span class="required">*</span></label>
               <textarea
                 v-model="dreamForm.content"
-                class="form-input textarea"
+                class="form-input spa-input spa-textarea"
                 :class="{ 'input-error': formErrors.content }"
                 placeholder="详细描述你的梦境（不少于10字）..."
                 rows="8"
@@ -430,7 +437,6 @@ onMounted(() => {
               <label class="form-label">情绪选择</label>
               <button class="selection-trigger" @click="openEmotionModal">
                 <span>选择情绪</span>
-                ↓
               </button>
 
               <div v-if="dreamForm.selectedEmotions.length > 0" class="selected-items">
@@ -442,12 +448,11 @@ onMounted(() => {
                     v-for="emotion in getSelectedEmotionObjects()"
                     :key="emotion.EmotionID"
                     class="tag"
-                    :style="{ borderColor: emotion.Color }"
                   >
                     <div class="tag-color" :style="{ backgroundColor: emotion.Color }"></div>
                     <span class="tag-text">{{ emotion.EmotionName }}</span>
                     <button class="tag-remove" @click="removeSelectedEmotion(emotion.EmotionID)">
-                      ❌
+                      <component :is="Close" class="remove-icon" />
                     </button>
                   </div>
                 </div>
@@ -459,7 +464,6 @@ onMounted(() => {
               <label class="form-label">梦境类型</label>
               <button class="selection-trigger" @click="openDreamTypeModal">
                 <span>选择梦境类型</span>
-                ↓
               </button>
 
               <div v-if="dreamForm.selectedDreamTypes.length > 0" class="selected-items">
@@ -471,12 +475,11 @@ onMounted(() => {
                     v-for="dreamType in getSelectedDreamTypeObjects()"
                     :key="dreamType.TypeID"
                     class="tag"
-                    :style="{ borderColor: dreamType.Color }"
                   >
                     <div class="tag-color" :style="{ backgroundColor: dreamType.Color }"></div>
                     <span class="tag-text">{{ dreamType.TypeName }}</span>
                     <button class="tag-remove" @click="removeSelectedDreamType(dreamType.TypeID)">
-                      ❌
+                      <component :is="Close" class="remove-icon" />
                     </button>
                   </div>
                 </div>
@@ -498,10 +501,8 @@ onMounted(() => {
                       'active': star <= dreamForm.sleepQuality
                     }]"
                     @click="setSleepQuality(star)"
-                    @mouseenter="sleepQualityHover = star"
-                    @mouseleave="sleepQualityHover = 0"
                   >
-                    {{ star <= dreamForm.sleepQuality ? '⭐' : '☆' }}
+                    <component :is="Star" class="star" />
                   </span>
                 </div>
                 <span class="rating-label">
@@ -522,10 +523,8 @@ onMounted(() => {
                       'active': star <= dreamForm.lucidityLevel
                     }]"
                     @click="setLucidityLevel(star)"
-                    @mouseenter="lucidityLevelHover = star"
-                    @mouseleave="lucidityLevelHover = 0"
                   >
-                    {{ star <= dreamForm.lucidityLevel ? '⭐' : '☆' }}
+                    <component :is="Star" class="star" />
                   </span>
                 </div>
                 <span class="rating-label">
@@ -574,7 +573,7 @@ onMounted(() => {
         <div class="modal-header">
           <h2 class="modal-title">选择情绪</h2>
           <button class="modal-close" @click="closeEmotionModal">
-            ❌
+            <component :is="Close" class="close-icon" />
           </button>
         </div>
         <div class="modal-body">
@@ -596,8 +595,8 @@ onMounted(() => {
             已选择 {{ tempSelectedEmotions.length }} 种情绪
           </span>
           <div class="modal-actions">
-            <button class="btn-secondary" @click="closeEmotionModal">取消</button>
-            <button class="btn-primary" @click="confirmEmotionSelection">确定</button>
+            <button class="spa-button-secondary" @click="closeEmotionModal">取消</button>
+            <button class="spa-button-primary" @click="confirmEmotionSelection">确定</button>
           </div>
         </div>
       </div>
@@ -609,7 +608,7 @@ onMounted(() => {
         <div class="modal-header">
           <h2 class="modal-title">选择梦境类型</h2>
           <button class="modal-close" @click="closeDreamTypeModal">
-            ❌
+            <component :is="Close" class="close-icon" />
           </button>
         </div>
         <div class="modal-body">
@@ -631,8 +630,8 @@ onMounted(() => {
             已选择 {{ tempSelectedDreamTypes.length }} 种类型
           </span>
           <div class="modal-actions">
-            <button class="btn-secondary" @click="closeDreamTypeModal">取消</button>
-            <button class="btn-primary" @click="confirmDreamTypeSelection">确定</button>
+            <button class="spa-button-secondary" @click="closeDreamTypeModal">取消</button>
+            <button class="spa-button-primary" @click="confirmDreamTypeSelection">确定</button>
           </div>
         </div>
       </div>
@@ -649,14 +648,22 @@ onMounted(() => {
 
 /* 编辑模式提示 */
 .edit-notice {
-  background: var(--primary-50);
-  border: 1px solid var(--primary-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--neutral-100);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-4);
-  text-align: center;
+  padding: var(--space-3);
+  margin-bottom: var(--space-5);
   font-size: var(--text-sm);
-  color: var(--primary-700);
+  color: var(--neutral-700);
+}
+
+.notice-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* 头部样式 */
@@ -665,13 +672,13 @@ onMounted(() => {
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: var(--z-sticky);
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  height: 72px;
+  height: 64px;
   gap: var(--space-4);
 }
 
@@ -685,9 +692,9 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   color: var(--neutral-700);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .back-button:hover {
@@ -695,16 +702,21 @@ onMounted(() => {
   color: var(--neutral-900);
 }
 
+.back-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .page-title {
-  font-size: var(--text-2xl);
-  font-weight: 700;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
   margin: 0;
   flex: 1;
 }
 
 .header-spacer {
-  width: 80px;
+  width: 70px;
 }
 
 /* 主内容区域 */
@@ -717,13 +729,13 @@ onMounted(() => {
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  padding: var(--space-10);
-  max-width: 800px;
+  padding: var(--space-8);
+  max-width: 760px;
   margin: 0 auto;
 }
 
 .form-section {
-  margin-bottom: var(--space-10);
+  margin-bottom: var(--space-8);
 }
 
 .form-section:last-child {
@@ -731,7 +743,7 @@ onMounted(() => {
 }
 
 .form-group {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .form-group:last-child {
@@ -740,10 +752,10 @@ onMounted(() => {
 
 .form-label {
   display: block;
-  font-size: var(--text-base);
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .required {
@@ -752,27 +764,26 @@ onMounted(() => {
 
 .form-input {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2_5) var(--space-3);
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   font-size: var(--text-base);
   color: var(--neutral-900);
-  transition: var(--transition-base);
-  box-sizing: border-box;
+  transition: all var(--transition-fast);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 3px rgb(100 116 139 / 0.1);
 }
 
-.form-input.textarea {
+.spa-textarea {
   resize: vertical;
-  min-height: 200px;
+  min-height: 180px;
   font-family: inherit;
-  line-height: 1.5;
+  line-height: var(--leading-relaxed);
 }
 
 .form-input::placeholder {
@@ -781,7 +792,7 @@ onMounted(() => {
 
 .input-error {
   border-color: var(--error-500) !important;
-  box-shadow: 0 0 0 3px rgb(239 68 68 / 0.1) !important;
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.1) !important;
 }
 
 .char-count {
@@ -795,11 +806,12 @@ onMounted(() => {
   color: var(--error-600);
   font-size: var(--text-sm);
   margin-top: var(--space-2);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .selection-trigger {
-  padding: var(--space-3) var(--space-4);
+  width: 100%;
+  padding: var(--space-2_5) var(--space-3);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background: white;
@@ -808,11 +820,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
 }
 
 .selection-trigger:hover {
-  border-color: var(--primary-300);
+  border-color: var(--border-color-hover);
   background: var(--neutral-50);
 }
 
@@ -823,7 +837,7 @@ onMounted(() => {
 
 .selected-items-label {
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   color: var(--neutral-600);
   margin-bottom: var(--space-3);
 }
@@ -838,13 +852,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1_5) var(--space-2_5);
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
   color: var(--neutral-700);
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .tag:hover {
@@ -853,28 +867,28 @@ onMounted(() => {
 }
 
 .tag-color {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: var(--radius-full);
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
 }
 
 .tag-text {
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .tag-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-1);
+  padding: var(--space-0_5);
   background: transparent;
   border: none;
   border-radius: var(--radius-full);
   color: var(--neutral-400);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .tag-remove:hover {
@@ -882,12 +896,17 @@ onMounted(() => {
   color: var(--error-600);
 }
 
+.remove-icon {
+  width: 14px;
+  height: 14px;
+}
+
 /* 评分组件 */
 .rating-container {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-3);
   background: var(--neutral-50);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
@@ -899,30 +918,25 @@ onMounted(() => {
 }
 
 .star-icon {
-  font-size: 24px;
   color: var(--neutral-300);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
-.star-icon:hover {
-  transform: scale(1.1);
+.star {
+  width: 22px;
+  height: 22px;
 }
 
 .star-icon.active {
   color: var(--warning-500);
 }
 
-.star-icon.hover {
-  color: var(--warning-400);
-}
-
 .rating-label {
-  font-size: var(--text-base);
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--neutral-700);
-  min-width: 60px;
-  text-align: center;
+  min-width: 50px;
 }
 
 /* 隐私设置 */
@@ -945,11 +959,11 @@ onMounted(() => {
 
 .toggle-slider {
   position: relative;
-  width: 44px;
-  height: 24px;
+  width: 40px;
+  height: 22px;
   background: var(--neutral-300);
   border-radius: var(--radius-full);
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .toggle-slider::before {
@@ -957,25 +971,25 @@ onMounted(() => {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: white;
   border-radius: var(--radius-full);
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
   box-shadow: 0 2px 4px rgb(0 0 0 / 0.2);
 }
 
 .toggle-input:checked + .toggle-slider {
-  background: var(--primary-600);
+  background: var(--neutral-900);
 }
 
 .toggle-input:checked + .toggle-slider::before {
-  transform: translateX(20px);
+  transform: translateX(18px);
 }
 
 .toggle-label {
   font-size: var(--text-base);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   color: var(--neutral-700);
 }
 
@@ -983,7 +997,7 @@ onMounted(() => {
   font-size: var(--text-sm);
   color: var(--neutral-500);
   margin: 0;
-  padding-left: 71px;
+  padding-left: 63px;
 }
 
 /* 提交按钮 */
@@ -995,49 +1009,10 @@ onMounted(() => {
 }
 
 .submit-button {
-  min-width: 200px;
-  padding: var(--space-4) var(--space-8);
+  min-width: 180px;
+  padding: var(--space-3) var(--space-8);
   font-size: var(--text-base);
-  font-weight: 600;
-  justify-content: center;
-}
-
-/* 按钮样式 */
-.btn-primary {
-  background: var(--primary-700);
-  color: white;
-  border: none;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  transition: var(--transition-base);
-}
-
-.btn-primary:hover {
-  background: var(--primary-800);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: white;
-  color: var(--neutral-700);
-  border: 1px solid var(--border-color);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  transition: var(--transition-base);
-}
-
-.btn-secondary:hover {
-  background: var(--neutral-50);
+  font-weight: var(--font-semibold);
 }
 
 /* 加载状态 */
@@ -1052,10 +1027,10 @@ onMounted(() => {
 }
 
 .loading-spinner {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 2px solid var(--neutral-200);
-  border-top: 2px solid var(--primary-500);
+  border-top: 2px solid var(--neutral-900);
   border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
 }
@@ -1076,19 +1051,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: var(--z-modal);
   padding: var(--space-4);
 }
 
 .modal {
   background: white;
   border-radius: var(--radius-2xl);
-  max-width: 600px;
+  max-width: 560px;
   width: 100%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-2xl);
   overflow: hidden;
 }
 
@@ -1096,13 +1071,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-6);
+  padding: var(--space-5);
   border-bottom: 1px solid var(--border-color);
 }
 
 .modal-title {
-  font-size: var(--text-xl);
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
   margin: 0;
 }
@@ -1118,7 +1093,7 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   color: var(--neutral-400);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .modal-close:hover {
@@ -1126,46 +1101,49 @@ onMounted(() => {
   color: var(--neutral-700);
 }
 
+.close-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .modal-body {
   flex: 1;
-  padding: var(--space-6);
+  padding: var(--space-5);
   overflow-y: auto;
 }
 
 .selection-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
 }
 
 .selection-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2_5);
+  padding: var(--space-2_5) var(--space-3);
   background: white;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
 }
 
 .selection-item:hover {
-  border-color: var(--primary-300);
+  border-color: var(--neutral-400);
   background: var(--neutral-50);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }
 
 .selection-item.selected {
-  border-color: var(--primary-500);
-  background: var(--primary-50);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  border-color: var(--neutral-900);
+  background: var(--neutral-50);
+  box-shadow: 0 0 0 1px var(--neutral-900);
 }
 
 .item-color {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: var(--radius-full);
   border: 2px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
@@ -1174,7 +1152,7 @@ onMounted(() => {
 
 .item-name {
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   color: var(--neutral-700);
 }
 
@@ -1182,7 +1160,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-6);
+  padding: var(--space-5);
   border-top: 1px solid var(--border-color);
   background: var(--neutral-50);
 }
@@ -1190,30 +1168,30 @@ onMounted(() => {
 .selection-count {
   font-size: var(--text-sm);
   color: var(--neutral-600);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .modal-actions {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 /* 容器样式 */
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-6);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .header-content {
-    height: 64px;
+    height: 60px;
     padding: 0 var(--space-4);
   }
 
   .page-title {
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
   }
 
   .main-content {
@@ -1221,21 +1199,13 @@ onMounted(() => {
   }
 
   .form-card {
-    padding: var(--space-6);
+    padding: var(--space-5);
     border-radius: var(--radius-xl);
   }
 
-  .selection-trigger {
-    max-width: 100%;
-  }
-
   .selection-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: var(--space-2);
-  }
-
-  .selection-item {
-    padding: var(--space-2) var(--space-3);
   }
 
   .modal-header,
@@ -1261,13 +1231,13 @@ onMounted(() => {
   .rating-container {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 }
 
 @media (max-width: 480px) {
   .tags-grid {
-    gap: var(--space-1);
+    gap: var(--space-1_5);
   }
 
   .tag {
@@ -1281,6 +1251,10 @@ onMounted(() => {
 
   .selection-grid {
     grid-template-columns: 1fr;
+  }
+
+  .form-card {
+    padding: var(--space-4);
   }
 }
 </style>

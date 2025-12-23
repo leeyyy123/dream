@@ -2,16 +2,28 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getUserInfo, getUserStatistics } from '../services/api'
+import {
+  House,
+  ChatLineRound,
+  DataAnalysis,
+  Reading,
+  User,
+  DocumentAdd,
+  TrendCharts,
+  DataLine,
+  Close,
+  Moon
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
 
 // 导航菜单项
 const navItems = ref([
-  { name: '首页', path: '/main/home', emoji: '🏠' },
-  { name: '记录梦境', path: '/create-dream', emoji: '🌙' },
-  { name: '分析梦境', path: '/main/dream-analysis', emoji: '🧠' },
-  { name: '我的梦境', path: '/main/my-dreams', emoji: '📖' }
+  { name: '首页', path: '/main/home', icon: House },
+  { name: '记录梦境', path: '/create-dream', icon: ChatLineRound },
+  { name: '分析梦境', path: '/main/dream-analysis', icon: DataAnalysis },
+  { name: '我的梦境', path: '/main/my-dreams', icon: Reading }
 ])
 
 const activeItem = ref('首页')
@@ -183,7 +195,7 @@ onUnmounted(() => {
           <!-- 品牌区域 -->
           <div class="nav-brand">
             <div class="brand-logo">
-              <span class="brand-emoji">🌙</span>
+              <component :is="Moon" class="brand-icon" />
             </div>
             <span class="brand-text">Dream</span>
           </div>
@@ -198,7 +210,7 @@ onUnmounted(() => {
                 :class="['nav-item', { active: activeItem === item.name }]"
                 @click="handleNavClick(item)"
               >
-                <span class="nav-emoji">{{ item.emoji }}</span>
+                <component :is="item.icon" class="nav-icon" />
                 <span class="nav-text">{{ item.name }}</span>
               </div>
             </div>
@@ -213,12 +225,12 @@ onUnmounted(() => {
                   class="avatar-img"
                 />
                 <div v-else class="default-avatar">
-                  <span class="user-emoji">👤</span>
+                  <component :is="User" class="user-icon" />
                 </div>
               </div>
 
               <!-- 用户下拉菜单 -->
-              <div v-if="showUserMenu" class="user-dropdown">
+              <div v-if="showUserMenu" class="user-dropdown animate-slide-down">
                 <div class="user-info">
                   <div class="user-name">{{ userInfo.username }}</div>
                   <div class="user-email">{{ userInfo.email }}</div>
@@ -242,17 +254,17 @@ onUnmounted(() => {
       <div class="spa-container">
         <div class="welcome-section">
           <div class="welcome-content">
-            <h1 class="welcome-title">欢迎回来，{{ userInfo.username }}！</h1>
+            <h1 class="welcome-title">欢迎回来，{{ userInfo.username }}</h1>
             <p class="welcome-description">
-              开始记录和分析你的梦境，探索潜意识的奥秘。
+              记录梦境，探索内心世界
             </p>
             <div class="quick-actions">
               <router-link to="/create-dream" class="spa-button-primary action-button">
-                <span class="action-icon">✨</span>
+                <component :is="DocumentAdd" class="action-icon" />
                 <span>记录新梦境</span>
               </router-link>
               <router-link to="/main/dream-analysis" class="spa-button-secondary action-button">
-                <span class="action-icon">🧠</span>
+                <component :is="DataAnalysis" class="action-icon" />
                 <span>开始分析</span>
               </router-link>
             </div>
@@ -263,7 +275,7 @@ onUnmounted(() => {
         <div class="stats-grid">
           <div class="stat-card spa-card">
             <div class="stat-icon">
-              <span>📖</span>
+              <component :is="Reading" />
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ statistics.totalDreams }}</div>
@@ -273,7 +285,7 @@ onUnmounted(() => {
 
           <div class="stat-card spa-card">
             <div class="stat-icon">
-              <span>📊</span>
+              <component :is="DataAnalysis" />
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ statistics.totalAnalyses }}</div>
@@ -283,7 +295,7 @@ onUnmounted(() => {
 
           <div class="stat-card spa-card">
             <div class="stat-icon">
-              <span>📈</span>
+              <component :is="DataLine" />
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ statistics.monthlyDreams }}</div>
@@ -313,9 +325,11 @@ onUnmounted(() => {
               </div>
             </div>
             <div v-else class="empty-state">
-              <div class="empty-icon">🌙</div>
+              <div class="empty-icon">
+                <component :is="Moon" />
+              </div>
               <h3 class="empty-title">还没有梦境记录</h3>
-              <p class="empty-description">开始记录你的第一个梦境吧</p>
+              <p class="empty-description">开始记录你的第一个梦境</p>
               <router-link to="/create-dream" class="spa-button-primary">
                 记录梦境
               </router-link>
@@ -339,7 +353,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: var(--z-sticky);
   backdrop-filter: blur(12px);
   background: rgba(255, 255, 255, 0.95);
 }
@@ -347,7 +361,7 @@ onUnmounted(() => {
 .nav-content {
   display: flex;
   align-items: center;
-  height: 72px;
+  height: 68px;
   justify-content: space-between;
 }
 
@@ -363,23 +377,23 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--primary-700);
+  width: 38px;
+  height: 38px;
+  background: var(--neutral-900);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  color: white;
 }
 
-.brand-emoji {
-  font-size: 20px;
-  color: white;
+.brand-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .brand-text {
   font-size: var(--text-xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--neutral-900);
-  letter-spacing: -0.5px;
+  letter-spacing: var(--tracking-tight);
 }
 
 /* 右侧区域 */
@@ -393,21 +407,20 @@ onUnmounted(() => {
 .nav-menu {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
   color: var(--neutral-600);
   font-size: var(--text-sm);
-  font-weight: 500;
-  position: relative;
+  font-weight: var(--font-medium);
 }
 
 .nav-item:hover {
@@ -416,13 +429,14 @@ onUnmounted(() => {
 }
 
 .nav-item.active {
-  background: var(--primary-50);
-  color: var(--primary-700);
-  font-weight: 600;
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+  font-weight: var(--font-semibold);
 }
 
-.nav-emoji {
-  font-size: 16px;
+.nav-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .nav-text {
@@ -438,13 +452,13 @@ onUnmounted(() => {
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-full);
   cursor: pointer;
   overflow: hidden;
-  border: 2px solid var(--border-color);
-  transition: var(--transition-base);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -452,8 +466,8 @@ onUnmounted(() => {
 }
 
 .user-avatar:hover {
-  border-color: var(--primary-300);
-  box-shadow: var(--shadow-md);
+  border-color: var(--neutral-300);
+  box-shadow: var(--shadow-sm);
 }
 
 .avatar-img {
@@ -468,10 +482,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--neutral-500);
 }
 
-.user-emoji {
-  font-size: 20px;
+.user-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* 用户下拉菜单 */
@@ -484,20 +500,8 @@ onUnmounted(() => {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--border-color);
-  z-index: 100;
+  z-index: var(--z-dropdown);
   overflow: hidden;
-  animation: slideDown var(--transition-base) ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .user-info {
@@ -507,9 +511,9 @@ onUnmounted(() => {
 
 .user-name {
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-0_5);
 }
 
 .user-email {
@@ -524,17 +528,16 @@ onUnmounted(() => {
 
 .dropdown-item {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2_5) var(--space-4);
   background: transparent;
   border: none;
   text-align: left;
   font-size: var(--text-sm);
   color: var(--neutral-700);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
-  gap: var(--space-3);
 }
 
 .dropdown-item:hover {
@@ -549,38 +552,39 @@ onUnmounted(() => {
 
 /* 主内容区域 */
 .main-content {
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - 68px);
 }
 
 /* 欢迎区域 */
 .welcome-section {
   text-align: center;
-  padding: var(--space-16) 0;
+  padding: var(--space-16) 0 var(--space-12);
 }
 
 .welcome-content {
-  max-width: 600px;
+  max-width: 560px;
   margin: 0 auto;
 }
 
 .welcome-title {
   font-size: var(--text-4xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--neutral-900);
   margin: 0 0 var(--space-4) 0;
-  line-height: 1.2;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
 }
 
 .welcome-description {
   font-size: var(--text-lg);
   color: var(--neutral-600);
   margin: 0 0 var(--space-8) 0;
-  line-height: 1.6;
+  line-height: var(--leading-relaxed);
 }
 
 .quick-actions {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-3);
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -589,51 +593,45 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-3) var(--space-5);
 }
 
 .action-icon {
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
 /* 统计网格 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-6);
-  margin: var(--space-16) 0;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-5);
+  margin: var(--space-12) 0;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-6);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  padding: var(--space-5);
+  border: 1px solid var(--border-color);
 }
 
 .stat-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: var(--primary-50);
-  color: var(--primary-600);
-  border-radius: var(--radius-xl);
-  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  background: var(--neutral-100);
+  color: var(--neutral-700);
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
+}
+
+.stat-icon > * {
+  width: 22px;
+  height: 22px;
 }
 
 .stat-content {
@@ -642,7 +640,7 @@ onUnmounted(() => {
 
 .stat-value {
   font-size: var(--text-2xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--neutral-900);
   line-height: 1;
 }
@@ -655,43 +653,54 @@ onUnmounted(() => {
 
 /* 最近梦境部分 */
 .recent-dreams-section {
-  margin-top: var(--space-16);
+  margin-top: var(--space-12);
 }
 
 .section-title {
   font-size: var(--text-2xl);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
-  margin: 0 0 var(--space-8) 0;
+  margin: 0 0 var(--space-6) 0;
 }
 
 .recent-dreams {
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
 
 /* 空状态 */
 .empty-state {
   text-align: center;
-  padding: var(--space-20) var(--space-4);
+  padding: var(--space-16) var(--space-4);
 }
 
 .empty-icon {
-  font-size: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: var(--neutral-100);
+  border-radius: var(--radius-xl);
   color: var(--neutral-400);
-  margin-bottom: var(--space-6);
+  margin: 0 auto var(--space-5);
+}
+
+.empty-icon > * {
+  width: 28px;
+  height: 28px;
 }
 
 .empty-title {
-  font-size: var(--text-xl);
-  font-weight: 600;
-  color: var(--neutral-700);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-800);
   margin: 0 0 var(--space-2) 0;
 }
 
 .empty-description {
   font-size: var(--text-base);
   color: var(--neutral-600);
-  margin: 0 0 var(--space-6) 0;
+  margin: 0 0 var(--space-5) 0;
 }
 
 /* 最近梦境列表 */
@@ -703,12 +712,12 @@ onUnmounted(() => {
 
 .recent-dream-card {
   padding: var(--space-5);
-  transition: var(--transition-base);
+  border: 1px solid var(--border-color);
 }
 
 .recent-dream-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .dream-header {
@@ -720,10 +729,10 @@ onUnmounted(() => {
 
 .dream-title {
   font-size: var(--text-lg);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--neutral-900);
   margin: 0;
-  line-height: 1.3;
+  line-height: var(--leading-snug);
   flex: 1;
   margin-right: var(--space-3);
 }
@@ -737,29 +746,28 @@ onUnmounted(() => {
 .dream-preview {
   font-size: var(--text-sm);
   color: var(--neutral-600);
-  line-height: 1.5;
+  line-height: var(--leading-relaxed);
   margin: 0 0 var(--space-4) 0;
 }
 
 .view-more-link {
   display: inline-flex;
   align-items: center;
-  color: var(--primary-600);
+  color: var(--neutral-900);
   text-decoration: none;
   font-size: var(--text-sm);
-  font-weight: 500;
-  transition: var(--transition-base);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-fast);
 }
 
 .view-more-link:hover {
-  color: var(--primary-700);
+  color: var(--neutral-700);
   transform: translateX(2px);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .nav-content {
-    padding: 0 var(--space-4);
     height: 64px;
   }
 
@@ -786,7 +794,11 @@ onUnmounted(() => {
 
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .welcome-section {
+    padding: var(--space-10) 0 var(--space-8);
   }
 }
 
@@ -797,7 +809,7 @@ onUnmounted(() => {
 
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
 }
 </style>
