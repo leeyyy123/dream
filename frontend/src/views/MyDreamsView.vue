@@ -345,7 +345,7 @@ onMounted(() => {
     </main>
 
     <!-- 删除确认弹窗 -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click="cancelDelete">
+    <div v-if="showDeleteConfirm" class="modal-overlay delete-modal" @click="cancelDelete">
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2 class="modal-title">确认删除</h2>
@@ -877,6 +877,11 @@ onMounted(() => {
   justify-content: center;
   z-index: var(--z-modal);
   padding: var(--space-4);
+}
+
+/* 删除确认弹窗需要更高的 z-index */
+.modal-overlay.delete-modal {
+  z-index: calc(var(--z-modal) + 100);
 }
 
 .modal {
