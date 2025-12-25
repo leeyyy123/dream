@@ -34,7 +34,9 @@ const analysisData = ref({
   avgSleepQuality: 0,
   avgLucidity: 0,
   mostCommonEmotions: [],
-  mostCommonTypes: []
+  mostCommonTypes: [],
+  stats: null,
+  aiAnalysis: ''
 })
 
 // 日期格式化
@@ -89,6 +91,28 @@ const getLucidityText = (lucidity) => {
   return lucidityMap[Math.round(lucidity)] || '未知'
 }
 
+// 获取关键词分类的显示名称
+const getCategoryName = (category) => {
+  const categoryNames = {
+    person: '人物',
+    place: '地点',
+    object: '物品',
+    event: '事件',
+    symbol: '象征',
+    other: '其他'
+  }
+  return categoryNames[category] || '其他'
+}
+
+// 获取词云文字大小（基于出现次数）
+const getKeywordSize = (count) => {
+  const minSize = 12
+  const maxSize = 32
+  const maxCount = 10  // 假设最大出现次数为10
+  const size = minSize + (count / maxCount) * (maxSize - minSize)
+  return Math.min(Math.max(size, minSize), maxSize)
+}
+
 // 设置日期范围（最近30天）
 const setRecent30Days = () => {
   const endDate = new Date()
@@ -139,14 +163,33 @@ const createNewAnalysis = async () => {
   try {
     const token = localStorage.getItem('authToken')
     const payload = {
-      dateFrom: analysisForm.value.dateFrom,
-      dateTo: analysisForm.value.dateTo
+      StartDate: analysisForm.value.dateFrom,
+      EndDate: analysisForm.value.dateTo
     }
     const response = await createAnalysis(payload, token)
 
     if (response.Code === 200) {
       showNewAnalysisModal.value = false
-      analysisData.value = response.Data
+
+      // 处理分析结果
+      const data = response.Data
+      if (data && data.stats) {
+        const stats = data.stats
+        analysisData.value = {
+          totalDreams: stats.totalDreams || 0,
+          avgSleepQuality: stats.sleepQualityStats ?
+            Object.entries(stats.sleepQualityStats).reduce((sum, [quality, count]) => sum + quality * count, 0) /
+            Object.values(stats.sleepQualityStats).reduce((sum, count) => sum + count, 0) : 3,
+          avgLucidity: stats.lucidityStats ?
+            Object.entries(stats.lucidityStats).reduce((sum, [lucidity, count]) => sum + lucidity * count, 0) /
+            Object.values(stats.lucidityStats).reduce((sum, count) => sum + count, 0) : 3,
+          mostCommonEmotions: Object.entries(stats.emotionStats || {}).sort((a, b) => b[1] - a[1]),
+          mostCommonTypes: Object.entries(stats.typeStats || {}).sort((a, b) => b[1] - a[1]),
+          stats: stats,
+          aiAnalysis: data.aiAnalysis || ''
+        }
+      }
+
       await fetchAnalyses()
 
       // 重置表单
@@ -166,6 +209,49 @@ const createNewAnalysis = async () => {
 const viewAnalysisDetail = (analysis) => {
   selectedAnalysis.value = analysis
   showAnalysisDetailModal.value = true
+}
+
+// 获取解析后的分析结果
+const getParsedAnalysisResult = (analysis) => {
+  if (!analysis) return ''
+
+  // 如果有 Result 字段（JSON），解析并显示
+  if (analysis.Result) {
+    try {
+      const resultData = typeof analysis.Result === 'string'
+        ? JSON.parse(analysis.Result)
+        : analysis.Result
+
+      if (resultData.aiAnalysis) {
+        return resultData.aiAnalysis
+      }
+    } catch (e) {
+      console.error('解析分析结果失败:', e)
+    }
+  }
+
+  // 否则使用 Recommendation 字段
+  if (analysis.Recommendation) {
+    return analysis.Recommendation
+  }
+
+  return '暂无分析报告'
+}
+
+// 获取解析后的统计数据
+const getParsedStats = (analysis) => {
+  if (!analysis || !analysis.Result) return null
+
+  try {
+    const resultData = typeof analysis.Result === 'string'
+      ? JSON.parse(analysis.Result)
+      : analysis.Result
+
+    return resultData.stats || null
+  } catch (e) {
+    console.error('解析统计数据失败:', e)
+    return null
+  }
 }
 
 // 关闭分析详情
@@ -224,6 +310,8 @@ onMounted(() => {
         <!-- 当前分析结果 -->
         <div v-if="analysisData.totalDreams > 0" class="analysis-summary">
           <h2 class="section-title">最新分析结果</h2>
+
+          <!-- 基本统计 -->
           <div class="summary-grid">
             <div class="summary-card spa-card">
               <div class="summary-icon">
@@ -254,6 +342,67 @@ onMounted(() => {
                 <p class="summary-value">{{ getLucidityText(analysisData.avgLucidity) }}</p>
               </div>
             </div>
+          </div>
+
+          <!-- 情绪分布 -->
+          <div v-if="analysisData.mostCommonEmotions && analysisData.mostCommonEmotions.length > 0" class="analysis-detail-section">
+            <h3 class="subsection-title">情绪分布</h3>
+            <div class="emotion-distribution">
+              <div
+                v-for="[emotion, count] in analysisData.mostCommonEmotions.slice(0, 10)"
+                :key="emotion"
+                class="emotion-bar-item"
+              >
+                <div class="emotion-label">{{ emotion }}</div>
+                <div class="emotion-bar">
+                  <div
+                    class="emotion-bar-fill"
+                    :style="{ width: `${(count / analysisData.totalDreams) * 100}%` }"
+                  ></div>
+                </div>
+                <div class="emotion-count">{{ count }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 梦境类型分布 -->
+          <div v-if="analysisData.mostCommonTypes && analysisData.mostCommonTypes.length > 0" class="analysis-detail-section">
+            <h3 class="subsection-title">梦境类型分布</h3>
+            <div class="type-distribution">
+              <div
+                v-for="[type, count] in analysisData.mostCommonTypes.slice(0, 10)"
+                :key="type"
+                class="type-item"
+              >
+                <span class="type-name">{{ type }}</span>
+                <span class="type-count">{{ count }}次</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 关键词词云 -->
+          <div v-if="analysisData.stats && analysisData.stats.keywordStats && analysisData.stats.keywordStats.topKeywords && analysisData.stats.keywordStats.topKeywords.length > 0" class="analysis-detail-section">
+            <h3 class="subsection-title">高频关键词</h3>
+            <div class="word-cloud">
+              <span
+                v-for="keyword in analysisData.stats.keywordStats.topKeywords.slice(0, 30)"
+                :key="keyword.text"
+                class="word-cloud-item"
+                :style="{
+                  fontSize: `${getKeywordSize(keyword.count)}px`,
+                  opacity: 0.6 + (keyword.count / 10) * 0.4
+                }"
+              >
+                {{ keyword.text }}
+                <small class="word-category">{{ getCategoryName(keyword.category) }}</small>
+              </span>
+            </div>
+          </div>
+
+          <!-- AI分析报告 -->
+          <div v-if="analysisData.aiAnalysis" class="analysis-detail-section">
+            <h3 class="subsection-title">AI分析报告</h3>
+            <div class="ai-report" v-html="analysisData.aiAnalysis.replace(/\n/g, '<br>')"></div>
           </div>
         </div>
 
@@ -372,7 +521,7 @@ onMounted(() => {
 
     <!-- 分析详情弹窗 -->
     <div v-if="showAnalysisDetailModal" class="modal-overlay" @click="closeAnalysisDetail">
-      <div class="modal modal-large" @click.stop>
+      <div class="modal modal-large modal-scrollable" @click.stop>
         <div class="modal-header">
           <h2 class="modal-title">分析报告详情</h2>
           <button class="modal-close" @click="closeAnalysisDetail">
@@ -381,7 +530,27 @@ onMounted(() => {
         </div>
 
         <div class="modal-body">
-          <div class="detail-content" v-html="selectedAnalysis?.AnalysisResult"></div>
+          <!-- 基本信息 -->
+          <div class="detail-meta-info">
+            <div class="meta-info-item">
+              <span class="meta-label">分析时间:</span>
+              <span class="meta-value">{{ formatDateTime(selectedAnalysis.CreatedAt) }}</span>
+            </div>
+            <div class="meta-info-item">
+              <span class="meta-label">时间范围:</span>
+              <span class="meta-value">{{ formatDate(selectedAnalysis.DateFrom) }} - {{ formatDate(selectedAnalysis.DateTo) }}</span>
+            </div>
+            <div class="meta-info-item">
+              <span class="meta-label">梦境数量:</span>
+              <span class="meta-value">{{ selectedAnalysis.DreamCount }} 个</span>
+            </div>
+          </div>
+
+          <!-- AI分析报告 -->
+          <div class="detail-report">
+            <h3 class="detail-section-title">AI分析报告</h3>
+            <div class="detail-content" v-html="getParsedAnalysisResult(selectedAnalysis).replace(/\n/g, '<br>')"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -851,6 +1020,219 @@ onMounted(() => {
   color: var(--neutral-700);
 }
 
+/* 可滚动弹窗 */
+.modal-scrollable {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-scrollable .modal-body {
+  max-height: calc(90vh - 80px);
+  overflow-y: auto;
+}
+
+/* 详情信息 */
+.detail-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.meta-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.meta-info-item:last-child {
+  border-bottom: none;
+}
+
+.meta-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--neutral-600);
+}
+
+.meta-value {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+}
+
+.detail-report {
+  margin-top: var(--space-4);
+}
+
+.detail-section-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+  margin: 0 0 var(--space-4) 0;
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--neutral-200);
+}
+
+/* 分析详细部分 */
+.analysis-detail-section {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.subsection-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+  margin: 0 0 var(--space-5) 0;
+}
+
+/* 情绪分布 */
+.emotion-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.emotion-bar-item {
+  display: grid;
+  grid-template-columns: 100px 1fr 50px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.emotion-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--neutral-700);
+}
+
+.emotion-bar {
+  height: 24px;
+  background: var(--neutral-100);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.emotion-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.emotion-count {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+  text-align: right;
+}
+
+/* 类型分布 */
+.type-distribution {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.type-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.type-item:hover {
+  border-color: #667eea;
+  background: rgb(102 126 234 / 0.05);
+  transform: translateY(-1px);
+}
+
+.type-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--neutral-700);
+}
+
+.type-count {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+}
+
+/* 词云 */
+.word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-xl);
+  min-height: 200px;
+  align-items: center;
+  justify-content: center;
+}
+
+.word-cloud-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  color: var(--neutral-700);
+  font-weight: var(--font-semibold);
+  transition: all var(--transition-fast);
+  cursor: default;
+}
+
+.word-cloud-item:hover {
+  color: #667eea;
+  transform: scale(1.1);
+}
+
+.word-category {
+  font-size: 10px !important;
+  font-weight: var(--font-normal) !important;
+  color: var(--neutral-500);
+  background: var(--neutral-200);
+  padding: var(--space-0_5) var(--space-1);
+  border-radius: var(--radius-full);
+}
+
+/* AI分析报告 */
+.ai-report {
+  line-height: var(--leading-relaxed);
+  color: var(--neutral-700);
+  font-size: var(--text-base);
+  white-space: pre-wrap;
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-xl);
+  border-left: 4px solid #667eea;
+}
+
+.ai-report::v-deep p {
+  margin-bottom: var(--space-3);
+}
+
+.ai-report::v-deep p:last-child {
+  margin-bottom: 0;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .header-content {
@@ -865,6 +1247,15 @@ onMounted(() => {
   }
 
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .emotion-bar-item {
+    grid-template-columns: 80px 1fr 40px;
+    gap: var(--space-2);
+  }
+
+  .type-distribution {
     grid-template-columns: 1fr;
   }
 
@@ -884,6 +1275,14 @@ onMounted(() => {
 
   .modal {
     max-width: 100%;
+  }
+
+  .word-cloud {
+    gap: var(--space-2);
+  }
+
+  .analysis-detail-section {
+    padding: var(--space-4);
   }
 }
 

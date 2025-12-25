@@ -7,6 +7,7 @@ from sql.AnalysisSql import (
     GetAnalysisDreamStats
 )
 from sql.LogSql import LogAnalysisSuccess, LogAnalysisFailed, GetClientIP, GetUserAgent
+from services.AIService import get_ai_service
 
 # Create blueprint
 analysis_bp = Blueprint('analysis', __name__, url_prefix='/Analysis')
@@ -55,8 +56,6 @@ def create_analysis():
 
         start_date = data['StartDate']
         end_date = data['EndDate']
-        result = data.get('Result', {})
-        recommendation = data.get('Recommendation', '')
 
         # 验证日期格式
         try:
@@ -94,6 +93,75 @@ def create_analysis():
 
             user_id = user_result['UserID']
 
+        # 获取梦境统计数据
+        stats_data, stats_status = GetAnalysisDreamStats(
+            connection=connection,
+            user_id=user_id,
+            start_date=start_date_obj,
+            end_date=end_date_obj
+        )
+
+        if stats_status != Status.OK:
+            print(f"[分析创建] 获取梦境统计数据失败: {stats_status}")
+            return jsonify(Status.ErrorRequest.ToResponse("获取梦境统计数据失败"))
+
+        # 检查是否有梦境数据
+        if stats_data['totalDreams'] == 0:
+            return jsonify(Status.ErrorRequest.ToResponse("所选时间段内没有梦境记录"))
+
+        print(f"[分析创建] 获取到 {stats_data['totalDreams']} 个梦境的统计数据")
+
+        # 调用AI生成分析报告
+        ai_analysis = ""
+        try:
+            ai_service = get_ai_service()
+
+            # 准备梦境摘要数据
+            dreams_summary = {
+                'period': f"{start_date} 至 {end_date}",
+                'totalDreams': stats_data['totalDreams'],
+                'emotions': stats_data['emotionStats'],
+                'types': stats_data['typeStats'],
+                'keywords': stats_data['keywordStats']['topKeywords'][:10] if stats_data['keywordStats']['topKeywords'] else [],
+                'avgSleepQuality': sum(
+                    k * v for k, v in stats_data['sleepQualityStats'].items()
+                ) / sum(stats_data['sleepQualityStats'].values()) if sum(stats_data['sleepQualityStats'].values()) > 0 else 3
+            }
+
+            # 生成AI分析
+            # 准备描述文本
+            emotion_list = list(stats_data['emotionStats'].keys())[:5] if stats_data['emotionStats'] else []
+            type_list = list(stats_data['typeStats'].keys())[:5] if stats_data['typeStats'] else []
+            keyword_list = [kw['text'] for kw in stats_data['keywordStats']['topKeywords'][:10]] if stats_data['keywordStats']['topKeywords'] else []
+
+            description = f"共有{stats_data['totalDreams']}个梦境"
+            if emotion_list:
+                description += f"，主要情绪包括{', '.join(emotion_list)}"
+            if type_list:
+                description += f"，主要类型包括{', '.join(type_list)}"
+            if keyword_list:
+                description += f"，高频关键词包括{', '.join(keyword_list)}"
+
+            ai_analysis = ai_service.generate_dream_summary([{
+                'title': f"{start_date} 至 {end_date} 的梦境分析",
+                'content': description,
+                'date': f"{start_date} 至 {end_date}"
+            }])
+
+            # 构建完整的分析结果
+            result = {
+                'stats': stats_data,
+                'aiAnalysis': ai_analysis
+            }
+
+        except Exception as e:
+            print(f"AI分析失败: {str(e)}")
+            # AI分析失败时，仍然保存统计数据
+            result = {
+                'stats': stats_data,
+                'aiAnalysis': "AI分析暂时不可用，请稍后重试。"
+            }
+
         # 创建分析记录
         analysis_status = AnalysisCreate(
             connection,
@@ -101,7 +169,7 @@ def create_analysis():
             start_date=start_date_obj,
             end_date=end_date_obj,
             result=result,
-            recommendation=recommendation
+            recommendation=ai_analysis  # AI分析作为建议
         )
 
         # 记录日志
@@ -112,7 +180,9 @@ def create_analysis():
             if log_status != Status.OK:
                 print(f"分析记录日志记录失败: {start_date}~{end_date}")
 
-            response = Status.OK.ToResponse("分析记录创建成功")
+            # 返回分析结果
+            response = Status.OK.ToResponse("分析创建成功")
+            response['Data'] = result
             return jsonify(response)
         else:
             # 记录失败日志

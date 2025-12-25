@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { createDream, getEmotions, getDreamTypes, getDreamDetail, updateDream } from '../services/api'
+import { createDream, getEmotions, getDreamTypes, getDreamDetail, updateDream, extractKeywords } from '../services/api'
 import {
   ArrowLeft,
   Close,
   Star,
-  Moon
+  Moon,
+  MagicStick
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -25,8 +26,14 @@ const dreamForm = ref({
   lucidityLevel: 3,
   isPublic: false,
   selectedEmotions: [],
-  selectedDreamTypes: []
+  selectedDreamTypes: [],
+  selectedKeywords: []
 })
+
+// AI关键词相关状态
+const aiKeywords = ref([])
+const isLoadingKeywords = ref(false)
+const keywordError = ref('')
 
 // 表单验证错误
 const formErrors = ref({
@@ -132,7 +139,8 @@ const submitDream = async () => {
       LucidityLevel: dreamForm.value.lucidityLevel,
       IsPublic: dreamForm.value.isPublic,
       EmotionIds: dreamForm.value.selectedEmotions,
-      DreamTypeIds: dreamForm.value.selectedDreamTypes
+      DreamTypeIds: dreamForm.value.selectedDreamTypes,
+      Keywords: dreamForm.value.selectedKeywords
     }
 
     let response
@@ -291,6 +299,89 @@ const getSelectedDreamTypeObjects = () => {
     .filter(type => dreamForm.value.selectedDreamTypes.includes(type.TypeID))
 }
 
+// 提取AI关键词
+const fetchAIKeywords = async () => {
+  const content = dreamForm.value.content.trim()
+  if (!content || content.length < 10) {
+    keywordError.value = '请先输入梦境内容（至少10字）'
+    return
+  }
+
+  isLoadingKeywords.value = true
+  keywordError.value = ''
+
+  try {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      keywordError.value = '请先登录'
+      return
+    }
+
+    const response = await extractKeywords(content, token)
+
+    if (response.Code === 200 && response.Data) {
+      // AI返回的关键词格式: { keywords: [{text: "...", category: "...", weight: N}, ...] }
+      const keywords = response.Data.keywords || []
+
+      // 取最多5个关键词
+      aiKeywords.value = keywords.slice(0, 5).map(kw => ({
+        text: kw.text || '',
+        category: kw.category || 'other',
+        weight: kw.weight || 2
+      }))
+    } else {
+      keywordError.value = response.Msg || '关键词提取失败'
+    }
+  } catch (error) {
+    console.error('提取关键词失败:', error)
+    keywordError.value = '网络错误，请稍后重试'
+  } finally {
+    isLoadingKeywords.value = false
+  }
+}
+
+// 切换关键词选择
+const toggleKeyword = (keyword) => {
+  const index = dreamForm.value.selectedKeywords.findIndex(
+    kw => kw.text === keyword.text
+  )
+  if (index > -1) {
+    dreamForm.value.selectedKeywords.splice(index, 1)
+  } else {
+    dreamForm.value.selectedKeywords.push(keyword)
+  }
+}
+
+// 检查关键词是否已选择
+const isKeywordSelected = (keyword) => {
+  return dreamForm.value.selectedKeywords.some(
+    kw => kw.text === keyword.text
+  )
+}
+
+// 删除已选择的关键词
+const removeSelectedKeyword = (keyword) => {
+  const index = dreamForm.value.selectedKeywords.findIndex(
+    kw => kw.text === keyword.text
+  )
+  if (index > -1) {
+    dreamForm.value.selectedKeywords.splice(index, 1)
+  }
+}
+
+// 获取关键词分类的显示名称
+const getCategoryName = (category) => {
+  const categoryNames = {
+    person: '人物',
+    place: '地点',
+    object: '物品',
+    event: '事件',
+    symbol: '象征',
+    other: '其他'
+  }
+  return categoryNames[category] || '其他'
+}
+
 // 加载梦境详情（编辑模式）
 const loadDreamDetail = async () => {
   if (!isEditMode.value) return
@@ -423,6 +514,64 @@ onMounted(() => {
                 {{ formErrors.content }}
               </div>
             </div>
+
+            <!-- AI关键词提取 -->
+            <div class="keyword-section">
+              <div class="keyword-header">
+                <label class="form-label">AI关键词提取</label>
+                <button
+                  class="extract-keywords-btn"
+                  @click="fetchAIKeywords"
+                  :disabled="isLoadingKeywords || !dreamForm.content || dreamForm.content.length < 10"
+                >
+                  <component :is="MagicStick" class="btn-icon" />
+                  <span>{{ isLoadingKeywords ? '提取中...' : '获取关键词' }}</span>
+                </button>
+              </div>
+
+              <!-- 错误提示 -->
+              <div v-if="keywordError" class="keyword-error">
+                {{ keywordError }}
+              </div>
+
+              <!-- AI提取的关键词 -->
+              <div v-if="aiKeywords.length > 0" class="ai-keywords-container">
+                <div class="keywords-label">
+                  点击选择至少一个关键词（共{{ aiKeywords.length }}个）
+                </div>
+                <div class="keywords-grid">
+                  <div
+                    v-for="(keyword, index) in aiKeywords"
+                    :key="index"
+                    class="keyword-item"
+                    :class="{ selected: isKeywordSelected(keyword) }"
+                    @click="toggleKeyword(keyword)"
+                  >
+                    <span class="keyword-text">{{ keyword.text }}</span>
+                    <span class="keyword-category">{{ getCategoryName(keyword.category) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 已选择的关键词 -->
+              <div v-if="dreamForm.selectedKeywords.length > 0" class="selected-keywords-container">
+                <div class="selected-keywords-label">
+                  已选择 {{ dreamForm.selectedKeywords.length }} 个关键词
+                </div>
+                <div class="selected-keywords-list">
+                  <div
+                    v-for="(keyword, index) in dreamForm.selectedKeywords"
+                    :key="index"
+                    class="selected-keyword-tag"
+                  >
+                    <span class="tag-text">{{ keyword.text }}</span>
+                    <button class="tag-remove" @click="removeSelectedKeyword(keyword)">
+                      <component :is="Close" class="remove-icon" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 情绪和梦境类型选择 -->
@@ -544,7 +693,7 @@ onMounted(() => {
                     class="toggle-input"
                   />
                   <span class="toggle-slider"></span>
-                  <span class="toggle-label">{{ dreamForm.isPublic ? '公开' : '私密' }}</span>
+                  <span class="toggle-status">{{ dreamForm.isPublic ? '公开' : '私密' }}</span>
                 </label>
                 <p class="privacy-description">
                   {{ dreamForm.isPublic ? '管理员可以看到这个梦境' : '只有你能看到这个梦境' }}
@@ -762,6 +911,178 @@ onMounted(() => {
   color: var(--error-500);
 }
 
+/* 关键词部分样式 */
+.keyword-section {
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  background: var(--neutral-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.keyword-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.extract-keywords-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgb(102 126 234 / 0.3);
+}
+
+.extract-keywords-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(102 126 234 / 0.4);
+}
+
+.extract-keywords-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.keyword-error {
+  color: var(--error-600);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--error-50);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.ai-keywords-container {
+  margin-top: var(--space-4);
+}
+
+.keywords-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-700);
+  margin-bottom: var(--space-3);
+}
+
+.keywords-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+}
+
+.keyword-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.keyword-item:hover {
+  border-color: #667eea;
+  background: rgb(102 126 234 / 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+}
+
+.keyword-item.selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgb(102 126 234 / 0.1) 0%, rgb(118 75 162 / 0.1) 100%);
+  box-shadow: 0 0 0 2px rgb(102 126 234 / 0.2);
+}
+
+.keyword-text {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+}
+
+.keyword-category {
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+  padding: var(--space-0_5) var(--space-2);
+  background: var(--neutral-100);
+  border-radius: var(--radius-full);
+}
+
+.selected-keywords-container {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+
+.selected-keywords-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-700);
+  margin-bottom: var(--space-3);
+}
+
+.selected-keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.selected-keyword-tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1_5) var(--space-2_5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.selected-keyword-tag .tag-text {
+  color: white;
+}
+
+.selected-keyword-tag .tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-0_5);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.selected-keyword-tag .tag-remove:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.selected-keyword-tag .remove-icon {
+  width: 12px;
+  height: 12px;
+}
+
 .form-input {
   width: 100%;
   padding: var(--space-2_5) var(--space-3);
@@ -837,8 +1158,8 @@ onMounted(() => {
 
 .selected-items-label {
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--neutral-600);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
   margin-bottom: var(--space-3);
 }
 
@@ -934,8 +1255,8 @@ onMounted(() => {
 
 .rating-label {
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--neutral-700);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
   min-width: 50px;
 }
 
@@ -987,10 +1308,10 @@ onMounted(() => {
   transform: translateX(18px);
 }
 
-.toggle-label {
-  font-size: var(--text-base);
-  font-weight: var(--font-medium);
-  color: var(--neutral-700);
+.toggle-status {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
 }
 
 .privacy-description {

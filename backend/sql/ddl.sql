@@ -7,13 +7,15 @@ use dream;
 -- 创建 Users 表
 CREATE TABLE Users (
     UserID INT PRIMARY KEY AUTO_INCREMENT,
-    UserName VARCHAR(50) NOT NULL UNIQUE,  
+    UserName VARCHAR(50) NOT NULL UNIQUE,
     Email VARCHAR(100) UNIQUE NOT NULL,
-    Password VARCHAR(255) NOT NULL,        
-    AvatarUrl VARCHAR(500),              
-    Gender ENUM('M', 'F', 'O'),        
+    Password VARCHAR(255) NOT NULL,
+    AvatarUrl VARCHAR(500),
+    Gender ENUM('M', 'F', 'O'),
     BirthDate DATE,
-    RegisterTime DATETIME DEFAULT CURRENT_TIMESTAMP,  
+    Phone VARCHAR(20),
+    Address VARCHAR(500),
+    RegisterTime DATETIME DEFAULT CURRENT_TIMESTAMP,
     LastLogin DATETIME,
     INDEX idx_email (Email),
     INDEX idx_username (UserName)
@@ -124,3 +126,19 @@ CREATE TABLE Logs (
     INDEX idx_timestamp (Timestamp),
     INDEX idx_user_logs (UserID, Timestamp)
 );
+
+-- AI对话历史表
+CREATE TABLE IF NOT EXISTS AIChats (
+    ChatID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT NOT NULL,
+    DreamID INT,                    -- 关联的梦境ID（可选）
+    AnalysisID INT,                  -- 关联的分析ID（可选）
+    SourceType VARCHAR(20) NOT NULL, -- 来源类型: 'dream' 或 'analysis'
+    SourceID INT NOT NULL,           -- 来源ID（梦境ID或分析ID）
+    Messages JSON NOT NULL,          -- 对话消息列表
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE,
+    INDEX idx_user_source (UserID, SourceType, SourceID),
+    INDEX idx_created_at (CreatedAt)
+) ;

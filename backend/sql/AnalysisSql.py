@@ -3,7 +3,7 @@
 
 import pymysql
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils.status import Status
 
 printdebug = True
@@ -67,7 +67,7 @@ def AnalysisGetList(connection, user_id: int, page: int = 1, page_size: int = 20
             cursor.execute(sql, params)
             analyses = cursor.fetchall()
 
-            # 处理日期格式
+            # 处理日期格式和解析结果
             for analysis in analyses:
                 if analysis['CreatedAt']:
                     analysis['CreatedAt'] = analysis['CreatedAt'].isoformat()
@@ -76,13 +76,30 @@ def AnalysisGetList(connection, user_id: int, page: int = 1, page_size: int = 20
                 if analysis['EndDate']:
                     analysis['EndDate'] = analysis['EndDate'].isoformat()
 
+                # 解析 Result JSON 字段
+                if analysis['Result']:
+                    try:
+                        result_data = json.loads(analysis['Result']) if isinstance(analysis['Result'], str) else analysis['Result']
+                        if 'stats' in result_data:
+                            analysis['DreamCount'] = result_data['stats'].get('totalDreams', 0)
+                        else:
+                            analysis['DreamCount'] = 0
+                    except:
+                        analysis['DreamCount'] = 0
+                else:
+                    analysis['DreamCount'] = 0
+
+                # 添加 DateFrom 和 DateTo 字段（与 StartDate/EndDate 相同）
+                analysis['DateFrom'] = analysis['StartDate']
+                analysis['DateTo'] = analysis['EndDate']
+
             result = {
-                'analyses': analyses,
-                'pagination': {
-                    'current_page': page,
-                    'page_size': page_size,
-                    'total_items': total,
-                    'total_pages': (total + page_size - 1) // page_size
+                'Analyses': analyses,
+                'Pagination': {
+                    'CurrentPage': page,
+                    'PageSize': page_size,
+                    'TotalItems': total,
+                    'TotalPages': (total + page_size - 1) // page_size
                 }
             }
 
@@ -186,6 +203,10 @@ def GetAnalysisDreamStats(connection, user_id: int, start_date: datetime.date, e
                     'totalDreams': 0,
                     'emotionStats': {},
                     'typeStats': {},
+                    'keywordStats': {
+                        'byCategory': {},
+                        'topKeywords': []
+                    },
                     'sleepQualityStats': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
                     'lucidityStats': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
                     'dailyDreamCounts': []
@@ -253,12 +274,49 @@ def GetAnalysisDreamStats(connection, user_id: int, start_date: datetime.date, e
                 for row in cursor.fetchall():
                     type_counts[row['TypeName']] = row['count']
 
+            # 获取关键词统计（按分类和文本）
+            keyword_stats = {
+                'byCategory': {},
+                'topKeywords': []
+            }
+
+            if dream_ids:
+                # 按分类统计关键词
+                sql = """
+                    SELECT Category, COUNT(*) as count
+                    FROM Keywords
+                    WHERE DreamID IN ({})
+                    GROUP BY Category
+                    ORDER BY count DESC
+                """.format(dream_ids_str)
+                cursor.execute(sql)
+                for row in cursor.fetchall():
+                    category = row['Category']
+                    keyword_stats['byCategory'][category] = row['count']
+
+                # 获取出现频率最高的关键词（词云数据）
+                sql = """
+                    SELECT KeywordText, Category, COUNT(*) as count
+                    FROM Keywords
+                    WHERE DreamID IN ({})
+                    GROUP BY KeywordText, Category
+                    ORDER BY count DESC
+                    LIMIT 50
+                """.format(dream_ids_str)
+                cursor.execute(sql)
+                for row in cursor.fetchall():
+                    keyword_stats['topKeywords'].append({
+                        'text': row['KeywordText'],
+                        'category': row['Category'],
+                        'count': row['count']
+                    })
+
             # 生成日期范围
             date_range = []
             current_date = start_date
             while current_date <= end_date:
                 date_range.append(current_date.isoformat())
-                current_date = datetime.combine(current_date, datetime.min.time()) + datetime.timedelta(days=1)
+                current_date = current_date + timedelta(days=1)
 
             daily_dream_counts = [
                 {'date': date, 'count': daily_counts.get(date, 0)}
@@ -269,6 +327,7 @@ def GetAnalysisDreamStats(connection, user_id: int, start_date: datetime.date, e
                 'totalDreams': len(dreams),
                 'emotionStats': emotion_counts,
                 'typeStats': type_counts,
+                'keywordStats': keyword_stats,
                 'sleepQualityStats': sleep_quality_counts,
                 'lucidityStats': lucidity_counts,
                 'dailyDreamCounts': daily_dream_counts
@@ -282,8 +341,12 @@ def GetAnalysisDreamStats(connection, user_id: int, start_date: datetime.date, e
     except pymysql.Error as e:
         if printdebug:
             print(f"梦境统计数据获取数据库错误: {e}")
+            import traceback
+            print(f"详细错误: {traceback.format_exc()}")
         return None, Status.DatabaseSelectError
     except Exception as e:
         if printdebug:
             print(f"梦境统计数据获取异常: {e}")
+            import traceback
+            print(f"详细错误: {traceback.format_exc()}")
         return None, Status.DatabaseSelectError

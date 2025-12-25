@@ -39,6 +39,19 @@ export const ANALYSIS_ENDPOINTS = {
   DELETE: `${API_BASE_URL}/Analysis/Delete`,
 }
 
+// AI API endpoints
+export const AI_ENDPOINTS = {
+  EXTRACT_KEYWORDS: `${API_BASE_URL}/AI/ExtractKeywords`,
+  ANALYZE_DREAM: `${API_BASE_URL}/AI/AnalyzeDream`,
+  CHAT: `${API_BASE_URL}/AI/Chat`,
+  GENERATE_SUMMARY: `${API_BASE_URL}/AI/GenerateSummary`,
+  GET_EMOTION_SUGGESTIONS: `${API_BASE_URL}/AI/GetEmotionSuggestions`,
+  ANALYZE_WITH_KEYWORDS: `${API_BASE_URL}/AI/AnalyzeDreamWithKeywords`,
+  GET_CHAT_HISTORY: `${API_BASE_URL}/AI/GetChatHistory`,
+  SAVE_CHAT_HISTORY: `${API_BASE_URL}/AI/SaveChatHistory`,
+  DELETE_CHAT_HISTORY: `${API_BASE_URL}/AI/DeleteChatHistory`,
+}
+
 /**
  * Login user
  * @param {string} email - User email
@@ -483,6 +496,197 @@ export async function shareDream(dreamId, isPublic, token) {
     },
     body: JSON.stringify({
       isPublic: isPublic
+    })
+  })
+
+  return await response.json()
+}
+
+// ==================== AI 相关API ====================
+
+/**
+ * 提取梦境关键词
+ * @param {string} content - 梦境内容
+ * @param {string} token - JWT token
+ * @returns {Promise} - 关键词提取结果 { keywords, emotions, dreamTypes }
+ */
+export async function extractKeywords(content, token) {
+  const response = await fetch(AI_ENDPOINTS.EXTRACT_KEYWORDS, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ content })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 分析梦境
+ * @param {string} content - 梦境内容
+ * @param {string} context - 额外上下文（可选）
+ * @param {string} token - JWT token
+ * @returns {Promise} - 分析结果
+ */
+export async function analyzeDream(content, token, context = '') {
+  const response = await fetch(AI_ENDPOINTS.ANALYZE_DREAM, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ content, context })
+  })
+
+  return await response.json()
+}
+
+/**
+ * AI对话
+ * @param {string} question - 用户问题
+ * @param {string} dreamContext - 梦境内容/分析报告
+ * @param {Array} chatHistory - 对话历史（可选）
+ * @param {string} token - JWT token
+ * @returns {Promise} - AI回复
+ */
+export async function aiChat(question, dreamContext, token, chatHistory = []) {
+  const response = await fetch(AI_ENDPOINTS.CHAT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      question,
+      dreamContext,
+      chatHistory
+    })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 生成多梦总结
+ * @param {Array} dreams - 梦境列表
+ * @param {string} token - JWT token
+ * @returns {Promise} - 总结结果
+ */
+export async function generateDreamSummary(dreams, token) {
+  const response = await fetch(AI_ENDPOINTS.GENERATE_SUMMARY, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ dreams })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 获取情绪建议
+ * @param {Array} emotions - 情绪列表
+ * @param {string} token - JWT token
+ * @returns {Promise} - 建议内容
+ */
+export async function getEmotionSuggestions(emotions, token) {
+  const response = await fetch(AI_ENDPOINTS.GET_EMOTION_SUGGESTIONS, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ emotions })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 分析梦境并提取关键词（组合接口）
+ * @param {string} content - 梦境内容
+ * @param {string} token - JWT token
+ * @param {string} context - 额外上下文（可选）
+ * @returns {Promise} - 分析结果（包含关键词和分析）
+ */
+export async function analyzeDreamWithKeywords(content, token, context = '') {
+  const response = await fetch(AI_ENDPOINTS.ANALYZE_WITH_KEYWORDS, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ content, context })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 获取AI对话历史
+ * @param {string} sourceType - 来源类型 (dream/analysis)
+ * @param {number} sourceId - 梦境ID或分析ID
+ * @param {string} token - JWT token
+ * @returns {Promise} - 对话历史
+ */
+export async function getAIChatHistory(sourceType, sourceId, token) {
+  const response = await fetch(`${AI_ENDPOINTS.GET_CHAT_HISTORY}?sourceType=${sourceType}&sourceId=${sourceId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * 保存AI对话历史
+ * @param {string} sourceType - 来源类型 (dream/analysis)
+ * @param {number} sourceId - 梦境ID或分析ID
+ * @param {Array} messages - 对话消息列表
+ * @param {string} token - JWT token
+ * @returns {Promise} - 保存结果
+ */
+export async function saveAIChatHistory(sourceType, sourceId, messages, token) {
+  const response = await fetch(AI_ENDPOINTS.SAVE_CHAT_HISTORY, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      sourceType,
+      sourceId,
+      messages
+    })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 删除AI对话历史
+ * @param {string} sourceType - 来源类型 (dream/analysis)
+ * @param {number} sourceId - 梦境ID或分析ID
+ * @param {string} token - JWT token
+ * @returns {Promise} - 删除结果
+ */
+export async function deleteAIChatHistory(sourceType, sourceId, token) {
+  const response = await fetch(AI_ENDPOINTS.DELETE_CHAT_HISTORY, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      sourceType,
+      sourceId
     })
   })
 

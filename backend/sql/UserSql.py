@@ -120,7 +120,7 @@ def UserGetInfo(connection, email: str):
     try:
         with connection.cursor() as cursor:
             sql_select = """
-                SELECT UserID, UserName, Email, AvatarUrl, RegisterTime, LastLogin
+                SELECT UserID, UserName, Email, AvatarUrl, Gender, BirthDate, Phone, Address, RegisterTime, LastLogin
                 FROM Users
                 WHERE Email=%s
                 LIMIT 1
@@ -138,6 +138,10 @@ def UserGetInfo(connection, email: str):
                 "UserName": user['UserName'],
                 "Email": user['Email'],
                 "AvatarUrl": user['AvatarUrl'],
+                "Gender": user['Gender'],
+                "BirthDate": user['BirthDate'].isoformat() if user['BirthDate'] else None,
+                "Phone": user['Phone'],
+                "Address": user['Address'],
                 "RegisterTime": user['RegisterTime'].isoformat() if user['RegisterTime'] else None,
                 "LastLogin": user['LastLogin'].isoformat() if user['LastLogin'] else None,
                 "Role": "user"
@@ -177,4 +181,77 @@ def UpdateUserPassword(connection, user_email: str, new_password: str):
     except Exception as e:
         if printdebug:
             print(f"用户密码更新异常: {e}")
+        return Status.DatabaseUpdateError
+
+def UpdateUserInfo(connection, user_id: int, user_info: dict):
+    """更新用户个人信息
+
+    Args:
+        connection: 数据库连接
+        user_id: 用户ID
+        user_info: 用户信息字典，可包含:
+                   - userName: 用户名
+                   - gender: 性别 (M/F/O)
+                   - birthDate: 出生日期
+                   - phone: 手机号
+                   - address: 地址
+    """
+    try:
+        with connection.cursor() as cursor:
+            # 构建动态UPDATE语句
+            update_fields = []
+            params = []
+
+            if 'userName' in user_info and user_info['userName']:
+                update_fields.append("UserName = %s")
+                params.append(user_info['userName'])
+
+            if 'gender' in user_info and user_info['gender']:
+                update_fields.append("Gender = %s")
+                params.append(user_info['gender'])
+
+            if 'birthDate' in user_info:
+                if user_info['birthDate']:
+                    update_fields.append("BirthDate = %s")
+                    params.append(user_info['birthDate'])
+                else:
+                    update_fields.append("BirthDate = NULL")
+
+            if 'phone' in user_info:
+                if user_info['phone']:
+                    update_fields.append("Phone = %s")
+                    params.append(user_info['phone'])
+                else:
+                    update_fields.append("Phone = NULL")
+
+            if 'address' in user_info:
+                if user_info['address']:
+                    update_fields.append("Address = %s")
+                    params.append(user_info['address'])
+                else:
+                    update_fields.append("Address = NULL")
+
+            if not update_fields:
+                return Status.ParamsError
+
+            # 添加user_id到参数
+            params.append(user_id)
+
+            sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE UserID = %s"
+            cursor.execute(sql, params)
+            connection.commit()
+
+            if printdebug:
+                print(f"用户信息更新成功: 用户ID={user_id}, 更新字段={update_fields}")
+
+            return Status.OK
+
+    except pymysql.Error as e:
+        if printdebug:
+            print(f"用户信息更新数据库错误: {e}")
+        connection.rollback()
+        return Status.DatabaseUpdateError
+    except Exception as e:
+        if printdebug:
+            print(f"用户信息更新异常: {e}")
         return Status.DatabaseUpdateError

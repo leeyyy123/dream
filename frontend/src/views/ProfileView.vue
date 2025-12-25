@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserInfo, updateUserInfo, uploadAvatar } from '../services/api'
 import {
@@ -10,6 +10,9 @@ import {
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
+
+// API 基础URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8888'
 
 // 响应式数据
 const loading = ref(false)
@@ -47,6 +50,17 @@ const genderOptions = [
   { value: 'female', label: '女' },
   { value: 'other', label: '其他' }
 ]
+
+// 计算完整的头像URL
+const fullAvatarUrl = computed(() => {
+  if (!userInfo.value.avatar) return null
+  // 如果已经是完整URL，直接返回
+  if (userInfo.value.avatar.startsWith('http://') || userInfo.value.avatar.startsWith('https://')) {
+    return userInfo.value.avatar
+  }
+  // 拼接API基础URL
+  return `${API_BASE_URL}${userInfo.value.avatar}`
+})
 
 // 返回主页
 const goBack = () => {
@@ -308,8 +322,8 @@ onMounted(() => {
           <div class="avatar-section">
             <div class="avatar-container">
               <img
-                v-if="userInfo.avatar"
-                :src="userInfo.avatar"
+                v-if="fullAvatarUrl"
+                :src="fullAvatarUrl"
                 :alt="userInfo.userName"
                 class="avatar-img"
               />

@@ -8,6 +8,7 @@ from blueprints.auth import auth_bp
 from blueprints.user import user_bp
 from blueprints.dream import dream_bp
 from blueprints.analysis import analysis_bp
+from blueprints.ai import ai_bp
 from sql.database import init_app
 
 def create_app():
@@ -32,6 +33,7 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(dream_bp)
     app.register_blueprint(analysis_bp)
+    app.register_blueprint(ai_bp)
 
     # 创建一个简单的检查JWT Token的端点
     @app.route('/CheckJWTToken', methods=['GET'])

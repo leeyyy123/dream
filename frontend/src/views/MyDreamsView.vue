@@ -11,7 +11,8 @@ import {
   DocumentAdd,
   Moon,
   Calendar,
-  ArrowLeft
+  ArrowLeft,
+  ChatLineRound
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -63,6 +64,19 @@ const getLucidityText = (lucidity) => {
     5: '非常清晰'
   }
   return lucidityMap[lucidity] || '未知'
+}
+
+// 获取关键词分类的显示名称
+const getCategoryName = (category) => {
+  const categoryNames = {
+    person: '人物',
+    place: '地点',
+    object: '物品',
+    event: '事件',
+    symbol: '象征',
+    other: '其他'
+  }
+  return categoryNames[category] || '其他'
 }
 
 // 获取梦境列表
@@ -203,6 +217,17 @@ const closeDreamDetail = () => {
 const editDream = (dreamId) => {
   closeDreamDetail()
   router.push(`/edit-dream/${dreamId}`)
+}
+
+// 问AI
+const askAI = () => {
+  const dreamId = selectedDream.value?.DreamID
+  if (dreamId) {
+    router.push({
+      path: '/ai-chat',
+      query: { source: 'dream', id: dreamId }
+    })
+  }
 }
 
 // 获取总页数
@@ -428,6 +453,21 @@ onMounted(() => {
               </div>
             </div>
 
+            <!-- 关键词 -->
+            <div v-if="selectedDream.Keywords && selectedDream.Keywords.length > 0" class="detail-section">
+              <h3 class="section-title">关键词</h3>
+              <div class="keyword-tags">
+                <div
+                  v-for="(keyword, index) in selectedDream.Keywords"
+                  :key="index"
+                  class="keyword-tag"
+                >
+                  <span class="keyword-text">{{ keyword.KeywordText }}</span>
+                  <span class="keyword-category">{{ getCategoryName(keyword.Category) }}</span>
+                </div>
+              </div>
+            </div>
+
             <!-- 梦境评估 -->
             <div class="detail-section">
               <h3 class="section-title">睡眠评估</h3>
@@ -447,6 +487,10 @@ onMounted(() => {
 
         <div class="modal-footer">
           <div class="detail-actions">
+            <button class="spa-button-secondary ai-button" @click="askAI">
+              <component :is="ChatLineRound" class="action-icon" />
+              <span>问AI</span>
+            </button>
             <button class="spa-button-primary" @click="editDream(selectedDream.DreamID)">
               <component :is="Edit" class="action-icon" />
               <span>编辑梦境</span>
@@ -640,6 +684,27 @@ onMounted(() => {
 .spa-button-secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.ai-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--transition-base);
+}
+
+.ai-button:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .spa-button-danger {
@@ -1061,6 +1126,43 @@ onMounted(() => {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: white;
+}
+
+/* 关键词标签 */
+.keyword-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.keyword-tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: var(--space-1_5) var(--space-2_5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  box-shadow: 0 2px 4px rgb(102 126 234 / 0.2);
+  transition: all var(--transition-fast);
+}
+
+.keyword-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgb(102 126 234 / 0.3);
+}
+
+.keyword-tag .keyword-text {
+  color: white;
+  font-weight: var(--font-semibold);
+}
+
+.keyword-tag .keyword-category {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: var(--text-xs);
+  padding: var(--space-0_5) var(--space-1_5);
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
 }
 
 /* 响应式设计 */

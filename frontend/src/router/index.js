@@ -5,6 +5,7 @@ import CreateDreamView from '../views/CreateDreamView.vue'
 import MyDreamsView from '../views/MyDreamsView.vue'
 import DreamAnalysisView from '../views/DreamAnalysisView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import AIChatView from '../views/AIChatView.vue'
 
 const routes = [
   {
@@ -45,6 +46,11 @@ const routes = [
     path: '/edit-dream/:id',
     name: 'EditDream',
     component: CreateDreamView
+  },
+  {
+    path: '/ai-chat',
+    name: 'AIChat',
+    component: AIChatView
   }
 ]
 

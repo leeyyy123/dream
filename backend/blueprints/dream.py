@@ -59,6 +59,7 @@ def create_dream():
         is_public = data.get('IsPublic', False)
         emotion_ids = data.get('EmotionIds', [])
         dream_type_ids = data.get('DreamTypeIds', [])
+        keywords = data.get('Keywords', [])
 
         # 数据验证
         if len(title) < 1:
@@ -81,6 +82,8 @@ def create_dream():
             return jsonify(Status.ErrorRequest.ToResponse("情绪ID列表必须是数组格式"))
         if not isinstance(dream_type_ids, list):
             return jsonify(Status.ErrorRequest.ToResponse("梦境类型ID列表必须是数组格式"))
+        if not isinstance(keywords, list):
+            return jsonify(Status.ErrorRequest.ToResponse("关键词列表必须是数组格式"))
 
         # 验证日期格式
         try:
@@ -119,7 +122,8 @@ def create_dream():
             lucidity_level=lucidity_level,
             is_public=is_public,
             emotion_ids=emotion_ids,
-            dream_type_ids=dream_type_ids
+            dream_type_ids=dream_type_ids,
+            keywords=keywords
         )
 
         # 记录日志

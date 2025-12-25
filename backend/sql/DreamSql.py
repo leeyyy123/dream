@@ -4,11 +4,13 @@ from datetime import datetime
 from utils.status import Status
 from utils.Objects import Users
 from .EmotionTypeSql import AddDreamEmotions, AddDreamTypes
+from .KeywordSql import AddDreamKeywords, GetDreamKeywords
 
 printdebug = True
 
 def DreamCreate(connection, user_id: int, title: str, content: str, dream_date: datetime.date,
-               sleep_quality: int, lucidity_level: int, is_public: bool, emotion_ids=None, dream_type_ids=None):
+               sleep_quality: int, lucidity_level: int, is_public: bool, emotion_ids=None, dream_type_ids=None,
+               keywords=None):
     """创建梦境记录"""
     try:
         with connection.cursor() as cursor:
@@ -57,6 +59,15 @@ def DreamCreate(connection, user_id: int, title: str, content: str, dream_date: 
                         # 不影响整体创建，只记录错误
                     else:
                         print(f"成功添加 {len(types_data)} 种类型关联: 梦境ID={dream_id}")
+
+            # 添加关键词关联（如果有）
+            if keywords:
+                keyword_status = AddDreamKeywords(connection, dream_id, keywords)
+                if keyword_status != Status.OK:
+                    print(f"添加关键词关联失败: 梦境ID={dream_id}")
+                    # 不影响整体创建，只记录错误
+                else:
+                    print(f"成功添加 {len(keywords)} 个关键词: 梦境ID={dream_id}")
 
             return Status.OK
 
@@ -215,6 +226,11 @@ def DreamGetDetail(connection, dream_id: int, user_id: int):
             """, (dream_id,))
             dream_types = cursor.fetchall()
 
+            # 查询关键词信息
+            keywords, keyword_status = GetDreamKeywords(connection, dream_id)
+            if keyword_status != Status.OK:
+                keywords = []
+
             # 处理日期格式
             dream_dict = {
                 'DreamID': dream['DreamID'],
@@ -227,7 +243,8 @@ def DreamGetDetail(connection, dream_id: int, user_id: int):
                 'IsPublic': dream['IsPublic'],
                 'RecordTime': dream['RecordTime'].isoformat(),
                 'Emotions': emotions,
-                'DreamTypes': dream_types
+                'DreamTypes': dream_types,
+                'Keywords': keywords
             }
 
             if printdebug:

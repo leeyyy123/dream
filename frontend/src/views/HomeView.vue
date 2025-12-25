@@ -1,10 +1,9 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getUserInfo, getUserStatistics } from '../services/api'
 import {
   House,
-  ChatLineRound,
   DataAnalysis,
   Reading,
   User,
@@ -18,10 +17,13 @@ import {
 const router = useRouter()
 const route = useRoute()
 
+// API 基础URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8888'
+
 // 导航菜单项
 const navItems = ref([
   { name: '首页', path: '/main/home', icon: House },
-  { name: '记录梦境', path: '/create-dream', icon: ChatLineRound },
+  { name: '记录梦境', path: '/create-dream', icon: DocumentAdd },
   { name: '分析梦境', path: '/main/dream-analysis', icon: DataAnalysis },
   { name: '我的梦境', path: '/main/my-dreams', icon: Reading }
 ])
@@ -42,6 +44,17 @@ const statistics = ref({
   totalAnalyses: 0,
   monthlyDreams: 0,
   recentDreams: []
+})
+
+// 计算完整的头像URL
+const fullAvatarUrl = computed(() => {
+  if (!userInfo.value.avatar) return null
+  // 如果已经是完整URL，直接返回
+  if (userInfo.value.avatar.startsWith('http://') || userInfo.value.avatar.startsWith('https://')) {
+    return userInfo.value.avatar
+  }
+  // 拼接API基础URL
+  return `${API_BASE_URL}${userInfo.value.avatar}`
 })
 
 // 获取用户信息
@@ -219,8 +232,8 @@ onUnmounted(() => {
             <div class="user-menu-container">
               <div class="user-avatar" @click="toggleUserMenu">
                 <img
-                  v-if="userInfo.avatar"
-                  :src="userInfo.avatar"
+                  v-if="fullAvatarUrl"
+                  :src="fullAvatarUrl"
                   :alt="userInfo.username"
                   class="avatar-img"
                 />
@@ -259,11 +272,11 @@ onUnmounted(() => {
               记录梦境，探索内心世界
             </p>
             <div class="quick-actions">
-              <router-link to="/create-dream" class="spa-button-primary action-button">
+              <router-link to="/create-dream" class="action-button spa-button-primary">
                 <component :is="DocumentAdd" class="action-icon" />
                 <span>记录新梦境</span>
               </router-link>
-              <router-link to="/main/dream-analysis" class="spa-button-secondary action-button">
+              <router-link to="/main/dream-analysis" class="action-button spa-button-secondary">
                 <component :is="DataAnalysis" class="action-icon" />
                 <span>开始分析</span>
               </router-link>
