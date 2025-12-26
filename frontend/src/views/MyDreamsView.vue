@@ -691,7 +691,7 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-5);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -702,7 +702,7 @@ onMounted(() => {
 }
 
 .ai-button:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  background: linear-gradient(135deg, #0284c7 0%, #0891b2 100%);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
@@ -1140,16 +1140,16 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-1_5);
   padding: var(--space-1_5) var(--space-2_5);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
-  box-shadow: 0 2px 4px rgb(102 126 234 / 0.2);
+  box-shadow: 0 2px 4px rgb(14 165 233 / 0.2);
   transition: all var(--transition-fast);
 }
 
 .keyword-tag:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgb(102 126 234 / 0.3);
+  box-shadow: 0 4px 8px rgb(14 165 233 / 0.3);
 }
 
 .keyword-tag .keyword-text {

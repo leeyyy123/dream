@@ -404,7 +404,12 @@ const loadDreamDetail = async () => {
         lucidityLevel: data.LucidityLevel || 3,
         isPublic: data.IsPublic || false,
         selectedEmotions: data.Emotions?.map(e => e.EmotionID) || [],
-        selectedDreamTypes: data.DreamTypes?.map(t => t.TypeID) || []
+        selectedDreamTypes: data.DreamTypes?.map(t => t.TypeID) || [],
+        selectedKeywords: data.Keywords?.map(k => ({
+          text: k.KeywordText,
+          category: k.Category,
+          weight: k.Weight || 2
+        })) || []
       }
     } else {
       alert(`获取梦境详情失败: ${response.Msg}`)
@@ -933,7 +938,7 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -941,12 +946,12 @@ onMounted(() => {
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 2px 8px rgb(102 126 234 / 0.3);
+  box-shadow: 0 2px 8px rgb(14 165 233 / 0.3);
 }
 
 .extract-keywords-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(102 126 234 / 0.4);
+  box-shadow: 0 4px 12px rgb(14 165 233 / 0.4);
 }
 
 .extract-keywords-btn:disabled {
@@ -1000,16 +1005,16 @@ onMounted(() => {
 }
 
 .keyword-item:hover {
-  border-color: #667eea;
-  background: rgb(102 126 234 / 0.05);
+  border-color: #0ea5e9;
+  background: rgb(14 165 233 / 0.05);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
 }
 
 .keyword-item.selected {
-  border-color: #667eea;
-  background: linear-gradient(135deg, rgb(102 126 234 / 0.1) 0%, rgb(118 75 162 / 0.1) 100%);
-  box-shadow: 0 0 0 2px rgb(102 126 234 / 0.2);
+  border-color: #0ea5e9;
+  background: linear-gradient(135deg, rgb(14 165 233 / 0.1) 0%, rgb(6 182 212 / 0.1) 100%);
+  box-shadow: 0 0 0 2px rgb(14 165 233 / 0.2);
 }
 
 .keyword-text {
@@ -1050,7 +1055,7 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1_5) var(--space-2_5);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
   color: white;
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
