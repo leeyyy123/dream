@@ -692,3 +692,217 @@ export async function deleteAIChatHistory(sourceType, sourceId, token) {
 
   return await response.json()
 }
+
+// ==================== Admin API ====================
+
+// Admin API endpoints
+export const ADMIN_ENDPOINTS = {
+  LOGIN: `${API_BASE_URL}/Admin/Login`,
+  GET_LOGS: `${API_BASE_URL}/Admin/GetLogs`,
+  DELETE_LOGS: `${API_BASE_URL}/Admin/DeleteLogs`,
+  GET_EMOTIONS: `${API_BASE_URL}/Admin/GetEmotions`,
+  ADD_EMOTION: `${API_BASE_URL}/Admin/AddEmotion`,
+  DELETE_EMOTION: (id) => `${API_BASE_URL}/Admin/DeleteEmotion/${id}`,
+  GET_DREAM_TYPES: `${API_BASE_URL}/Admin/GetDreamTypes`,
+  ADD_DREAM_TYPE: `${API_BASE_URL}/Admin/AddDreamType`,
+  DELETE_DREAM_TYPE: (id) => `${API_BASE_URL}/Admin/DeleteDreamType/${id}`,
+  GET_PUBLIC_DREAMS: `${API_BASE_URL}/Admin/GetPublicDreams`,
+}
+
+/**
+ * 管理员登录
+ * @param {string} email - 管理员邮箱
+ * @param {string} password - 密码
+ * @returns {Promise} - 登录结果
+ */
+export async function adminLogin(email, password) {
+  const response = await fetch(ADMIN_ENDPOINTS.LOGIN, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      Email: email,
+      Password: password
+    })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 获取日志列表
+ * @param {string} token - JWT token
+ * @param {object} params - 查询参数 { logType, startDate, endDate, page, pageSize }
+ * @returns {Promise} - 日志列表
+ */
+export async function getLogs(token, params = {}) {
+  const queryString = new URLSearchParams(params).toString()
+  const url = queryString ? `${ADMIN_ENDPOINTS.GET_LOGS}?${queryString}` : ADMIN_ENDPOINTS.GET_LOGS
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * 批量删除日志
+ * @param {Array} logIds - 日志ID列表
+ * @param {string} token - JWT token
+ * @returns {Promise} - 删除结果
+ */
+export async function deleteLogs(logIds, token) {
+  const response = await fetch(ADMIN_ENDPOINTS.DELETE_LOGS, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      logIds
+    })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 获取所有情绪
+ * @param {string} token - JWT token
+ * @returns {Promise} - 情绪列表
+ */
+export async function adminGetEmotions(token) {
+  const response = await fetch(ADMIN_ENDPOINTS.GET_EMOTIONS, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * 添加新情绪
+ * @param {object} data - 情绪数据 { emotionName, color }
+ * @param {string} token - JWT token
+ * @returns {Promise} - 添加结果
+ */
+export async function adminAddEmotion(data, token) {
+  const response = await fetch(ADMIN_ENDPOINTS.ADD_EMOTION, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      EmotionName: data.emotionName,
+      Color: data.color
+    })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 删除情绪
+ * @param {number} emotionId - 情绪ID
+ * @param {string} token - JWT token
+ * @returns {Promise} - 删除结果
+ */
+export async function adminDeleteEmotion(emotionId, token) {
+  const response = await fetch(ADMIN_ENDPOINTS.DELETE_EMOTION(emotionId), {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * 获取所有梦境类型
+ * @param {string} token - JWT token
+ * @returns {Promise} - 梦境类型列表
+ */
+export async function adminGetDreamTypes(token) {
+  const response = await fetch(ADMIN_ENDPOINTS.GET_DREAM_TYPES, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * 添加新梦境类型
+ * @param {object} data - 类型数据 { typeName, color }
+ * @param {string} token - JWT token
+ * @returns {Promise} - 添加结果
+ */
+export async function adminAddDreamType(data, token) {
+  const response = await fetch(ADMIN_ENDPOINTS.ADD_DREAM_TYPE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      TypeName: data.typeName,
+      Color: data.color
+    })
+  })
+
+  return await response.json()
+}
+
+/**
+ * 删除梦境类型
+ * @param {number} typeId - 类型ID
+ * @param {string} token - JWT token
+ * @returns {Promise} - 删除结果
+ */
+export async function adminDeleteDreamType(typeId, token) {
+  const response = await fetch(ADMIN_ENDPOINTS.DELETE_DREAM_TYPE(typeId), {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}
+
+/**
+ * 获取所有公开梦境
+ * @param {string} token - JWT token
+ * @param {object} params - 查询参数 { page, pageSize }
+ * @returns {Promise} - 公开梦境列表
+ */
+export async function getPublicDreams(token, params = {}) {
+  const queryString = new URLSearchParams(params).toString()
+  const url = queryString ? `${ADMIN_ENDPOINTS.GET_PUBLIC_DREAMS}?${queryString}` : ADMIN_ENDPOINTS.GET_PUBLIC_DREAMS
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+
+  return await response.json()
+}

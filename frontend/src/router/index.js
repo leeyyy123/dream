@@ -6,6 +6,8 @@ import MyDreamsView from '../views/MyDreamsView.vue'
 import DreamAnalysisView from '../views/DreamAnalysisView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import AIChatView from '../views/AIChatView.vue'
+import AdminLoginView from '../views/AdminLoginView.vue'
+import AdminDashboardView from '../views/AdminDashboardView.vue'
 
 const routes = [
   {
@@ -51,6 +53,16 @@ const routes = [
     path: '/ai-chat',
     name: 'AIChat',
     component: AIChatView
+  },
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: AdminLoginView
+  },
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: AdminDashboardView
   }
 ]
 
