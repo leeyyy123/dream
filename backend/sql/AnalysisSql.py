@@ -246,33 +246,41 @@ def GetAnalysisDreamStats(connection, user_id: int, start_date: datetime.date, e
                 dream_date = dream['DreamDate'].isoformat() if hasattr(dream['DreamDate'], 'isoformat') else str(dream['DreamDate'])
                 daily_counts[dream_date] = daily_counts.get(dream_date, 0) + 1
 
-            # 获取情绪统计
+            # 获取情绪统计和完整信息
             if dream_ids:
                 sql = """
-                    SELECT e.EmotionName, COUNT(*) as count
+                    SELECT e.EmotionID, e.EmotionName, e.Color, COUNT(*) as count
                     FROM DreamEmotions de
                     JOIN Emotions e ON de.EmotionID = e.EmotionID
                     WHERE de.DreamID IN ({})
-                    GROUP BY e.EmotionName
+                    GROUP BY e.EmotionID, e.EmotionName, e.Color
                     ORDER BY count DESC
                 """.format(dream_ids_str)
                 cursor.execute(sql)
                 for row in cursor.fetchall():
-                    emotion_counts[row['EmotionName']] = row['count']
+                    emotion_counts[row['EmotionName']] = {
+                        'count': row['count'],
+                        'color': row['Color'],
+                        'id': row['EmotionID']
+                    }
 
-            # 获取类型统计
+            # 获取类型统计和完整信息
             if dream_ids:
                 sql = """
-                    SELECT dt.TypeName, COUNT(*) as count
+                    SELECT dt.TypeID, dt.TypeName, dt.Color, COUNT(*) as count
                     FROM DreamTypesRelation dtr
                     JOIN DreamTypes dt ON dtr.TypeID = dt.TypeID
                     WHERE dtr.DreamID IN ({})
-                    GROUP BY dt.TypeName
+                    GROUP BY dt.TypeID, dt.TypeName, dt.Color
                     ORDER BY count DESC
                 """.format(dream_ids_str)
                 cursor.execute(sql)
                 for row in cursor.fetchall():
-                    type_counts[row['TypeName']] = row['count']
+                    type_counts[row['TypeName']] = {
+                        'count': row['count'],
+                        'color': row['Color'],
+                        'id': row['TypeID']
+                    }
 
             # 获取关键词统计（按分类和文本）
             keyword_stats = {

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDreamsList, createAnalysis, getAnalysisList } from '../services/api'
+import * as echarts from 'echarts'
 import {
   ArrowLeft,
   Close,
@@ -38,6 +39,27 @@ const analysisData = ref({
   stats: null,
   aiAnalysis: ''
 })
+
+// 图表实例
+const lineChartRef = ref(null)
+const emotionPieChartRef = ref(null)
+const typeBarChartRef = ref(null)
+const wordCloudChartRef = ref(null)
+
+// 详情弹窗中的图表实例
+const detailLineChartRef = ref(null)
+const detailEmotionPieChartRef = ref(null)
+const detailTypeBarChartRef = ref(null)
+const detailWordCloudChartRef = ref(null)
+
+let lineChart = null
+let emotionPieChart = null
+let typeBarChart = null
+let wordCloudChart = null
+let detailLineChart = null
+let detailEmotionPieChart = null
+let detailTypeBarChart = null
+let detailWordCloudChart = null
 
 // 日期格式化
 const formatDate = (dateString) => {
@@ -175,6 +197,29 @@ const createNewAnalysis = async () => {
       const data = response.Data
       if (data && data.stats) {
         const stats = data.stats
+
+        // 转换情绪数据格式（兼容新旧格式）
+        let emotionsArray = []
+        if (stats.emotionStats) {
+          emotionsArray = Object.entries(stats.emotionStats)
+            .sort((a, b) => {
+              const countA = typeof a[1] === 'object' ? a[1].count : a[1]
+              const countB = typeof b[1] === 'object' ? b[1].count : b[1]
+              return countB - countA
+            })
+        }
+
+        // 转换类型数据格式（兼容新旧格式）
+        let typesArray = []
+        if (stats.typeStats) {
+          typesArray = Object.entries(stats.typeStats)
+            .sort((a, b) => {
+              const countA = typeof a[1] === 'object' ? a[1].count : a[1]
+              const countB = typeof b[1] === 'object' ? b[1].count : b[1]
+              return countB - countA
+            })
+        }
+
         analysisData.value = {
           totalDreams: stats.totalDreams || 0,
           avgSleepQuality: stats.sleepQualityStats ?
@@ -183,14 +228,17 @@ const createNewAnalysis = async () => {
           avgLucidity: stats.lucidityStats ?
             Object.entries(stats.lucidityStats).reduce((sum, [lucidity, count]) => sum + lucidity * count, 0) /
             Object.values(stats.lucidityStats).reduce((sum, count) => sum + count, 0) : 3,
-          mostCommonEmotions: Object.entries(stats.emotionStats || {}).sort((a, b) => b[1] - a[1]),
-          mostCommonTypes: Object.entries(stats.typeStats || {}).sort((a, b) => b[1] - a[1]),
+          mostCommonEmotions: emotionsArray,
+          mostCommonTypes: typesArray,
           stats: stats,
           aiAnalysis: data.aiAnalysis || ''
         }
       }
 
       await fetchAnalyses()
+
+      // 渲染图表
+      await renderAllCharts()
 
       // 重置表单
       analysisForm.value = { dateFrom: '', dateTo: '' }
@@ -206,9 +254,35 @@ const createNewAnalysis = async () => {
 }
 
 // 查看分析详情
-const viewAnalysisDetail = (analysis) => {
+const viewAnalysisDetail = async (analysis) => {
   selectedAnalysis.value = analysis
   showAnalysisDetailModal.value = true
+  // 等待DOM更新后渲染图表
+  await nextTick()
+  renderDetailCharts()
+}
+
+// 关闭分析详情
+const closeAnalysisDetail = () => {
+  showAnalysisDetailModal.value = false
+  selectedAnalysis.value = null
+  // 清理图表
+  if (detailLineChart) {
+    detailLineChart.dispose()
+    detailLineChart = null
+  }
+  if (detailEmotionPieChart) {
+    detailEmotionPieChart.dispose()
+    detailEmotionPieChart = null
+  }
+  if (detailTypeBarChart) {
+    detailTypeBarChart.dispose()
+    detailTypeBarChart = null
+  }
+  if (detailWordCloudChart) {
+    detailWordCloudChart.dispose()
+    detailWordCloudChart = null
+  }
 }
 
 // 获取解析后的分析结果
@@ -254,10 +328,262 @@ const getParsedStats = (analysis) => {
   }
 }
 
-// 关闭分析详情
-const closeAnalysisDetail = () => {
-  showAnalysisDetailModal.value = false
-  selectedAnalysis.value = null
+// 渲染折线图（梦境数量变化）
+const renderLineChart = (container, dailyData) => {
+  if (!container || !dailyData || dailyData.length === 0) return
+
+  const chart = echarts.init(container)
+  const dates = dailyData.map(d => d.date)
+  const counts = dailyData.map(d => d.count)
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      formatter: '{b}<br/>梦境数: {c}'
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLabel: {
+        rotate: 45,
+        fontSize: 10
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: '梦境数'
+    },
+    series: [{
+      data: counts,
+      type: 'line',
+      smooth: true,
+      lineStyle: {
+        width: 3,
+        color: '#667eea'
+      },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(102, 126, 234, 0.5)' },
+          { offset: 1, color: 'rgba(102, 126, 234, 0.1)' }
+        ])
+      },
+      itemStyle: {
+        color: '#667eea'
+      }
+    }]
+  }
+
+  chart.setOption(option)
+  return chart
+}
+
+// 渲染情绪饼图
+const renderEmotionPieChart = (container, emotionStats) => {
+  if (!container || !emotionStats || Object.keys(emotionStats).length === 0) return
+
+  const chart = echarts.init(container)
+  const data = []
+  const colors = []
+
+  Object.entries(emotionStats).forEach(([name, value]) => {
+    // 如果数据是对象（包含count和color），提取值
+    const count = typeof value === 'object' ? value.count : value
+    const color = typeof value === 'object' ? value.color : null
+    data.push({ name, value: count })
+    if (color) {
+      colors.push(color)
+    }
+  })
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c} ({d}%)'
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      top: 'middle',
+      textStyle: {
+        fontSize: 12
+      }
+    },
+    series: [{
+      name: '情绪分布',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['60%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 10,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: {
+        show: false,
+        position: 'center'
+      },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: 16,
+          fontWeight: 'bold'
+        }
+      },
+      labelLine: {
+        show: false
+      },
+      data: data
+    }]
+  }
+
+  // 使用从数据库获取的颜色
+  if (colors.length > 0) {
+    option.color = colors
+  } else {
+    // 如果没有颜色，使用默认颜色数组
+    option.color = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#30cfd0']
+  }
+
+  chart.setOption(option)
+  return chart
+}
+
+// 渲染类型柱状图
+const renderTypeBarChart = (container, typeStats) => {
+  if (!container || !typeStats || Object.keys(typeStats).length === 0) return
+
+  const chart = echarts.init(container)
+  const types = []
+  const counts = []
+  const colors = []
+
+  Object.entries(typeStats).forEach(([type, data]) => {
+    types.push(type)
+    // 如果数据是对象（包含count和color），提取值
+    const count = typeof data === 'object' ? data.count : data
+    const color = typeof data === 'object' ? data.color : null
+    counts.push(count)
+    colors.push(color || '#667eea')
+  })
+
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: types,
+      axisLabel: {
+        rotate: 45,
+        fontSize: 10
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: '出现次数'
+    },
+    series: [{
+      data: counts.map((count, index) => ({
+        value: count,
+        itemStyle: {
+          color: colors[index]
+        }
+      })),
+      type: 'bar',
+      barWidth: '60%'
+    }]
+  }
+
+  chart.setOption(option)
+  return chart
+}
+
+// 渲染词云（使用简单的标签云）
+const renderWordCloud = (container, keywords) => {
+  if (!container || !keywords || keywords.length === 0) return null
+
+  // 不使用ECharts，直接返回null，由模板处理
+  return null
+}
+
+// 渲染所有图表
+const renderAllCharts = async () => {
+  await nextTick()
+
+  const stats = analysisData.value.stats
+  if (!stats) return
+
+  // 渲染折线图
+  if (lineChartRef.value && stats.dailyDreamCounts) {
+    if (lineChart) lineChart.dispose()
+    lineChart = renderLineChart(lineChartRef.value, stats.dailyDreamCounts)
+  }
+
+  // 渲染情绪饼图
+  if (emotionPieChartRef.value && stats.emotionStats) {
+    if (emotionPieChart) emotionPieChart.dispose()
+    emotionPieChart = renderEmotionPieChart(emotionPieChartRef.value, stats.emotionStats)
+  }
+
+  // 渲染类型柱状图
+  if (typeBarChartRef.value && stats.typeStats) {
+    if (typeBarChart) typeBarChart.dispose()
+    typeBarChart = renderTypeBarChart(typeBarChartRef.value, stats.typeStats)
+  }
+
+  // 渲染词云
+  if (wordCloudChartRef.value && stats.keywordStats?.topKeywords) {
+    if (wordCloudChart) wordCloudChart.dispose()
+    wordCloudChart = renderWordCloud(wordCloudChartRef.value, stats.keywordStats.topKeywords)
+  }
+}
+
+// 渲染详情弹窗的所有图表
+const renderDetailCharts = async () => {
+  await nextTick()
+
+  const stats = getParsedStats(selectedAnalysis.value)
+  if (!stats) return
+
+  // 渲染折线图
+  if (detailLineChartRef.value && stats.dailyDreamCounts) {
+    if (detailLineChart) detailLineChart.dispose()
+    detailLineChart = renderLineChart(detailLineChartRef.value, stats.dailyDreamCounts)
+  }
+
+  // 渲染情绪饼图
+  if (detailEmotionPieChartRef.value && stats.emotionStats) {
+    if (detailEmotionPieChart) detailEmotionPieChart.dispose()
+    detailEmotionPieChart = renderEmotionPieChart(detailEmotionPieChartRef.value, stats.emotionStats)
+  }
+
+  // 渲染类型柱状图
+  if (detailTypeBarChartRef.value && stats.typeStats) {
+    if (detailTypeBarChart) detailTypeBarChart.dispose()
+    detailTypeBarChart = renderTypeBarChart(detailTypeBarChartRef.value, stats.typeStats)
+  }
+
+  // 渲染词云
+  if (detailWordCloudChartRef.value && stats.keywordStats?.topKeywords) {
+    if (detailWordCloudChart) detailWordCloudChart.dispose()
+    detailWordCloudChart = renderWordCloud(detailWordCloudChartRef.value, stats.keywordStats.topKeywords)
+  }
 }
 
 // 打开新建分析弹窗
@@ -282,6 +608,26 @@ const goBack = () => {
 // 组件挂载
 onMounted(() => {
   fetchAnalyses()
+})
+
+// 组件卸载时清理图表
+onUnmounted(() => {
+  if (lineChart) {
+    lineChart.dispose()
+    lineChart = null
+  }
+  if (emotionPieChart) {
+    emotionPieChart.dispose()
+    emotionPieChart = null
+  }
+  if (typeBarChart) {
+    typeBarChart.dispose()
+    typeBarChart = null
+  }
+  if (wordCloudChart) {
+    wordCloudChart.dispose()
+    wordCloudChart = null
+  }
 })
 </script>
 
@@ -346,55 +692,36 @@ onMounted(() => {
 
           <!-- 情绪分布 -->
           <div v-if="analysisData.mostCommonEmotions && analysisData.mostCommonEmotions.length > 0" class="analysis-detail-section">
-            <h3 class="subsection-title">情绪分布</h3>
-            <div class="emotion-distribution">
-              <div
-                v-for="[emotion, count] in analysisData.mostCommonEmotions.slice(0, 10)"
-                :key="emotion"
-                class="emotion-bar-item"
-              >
-                <div class="emotion-label">{{ emotion }}</div>
-                <div class="emotion-bar">
-                  <div
-                    class="emotion-bar-fill"
-                    :style="{ width: `${(count / analysisData.totalDreams) * 100}%` }"
-                  ></div>
-                </div>
-                <div class="emotion-count">{{ count }}</div>
-              </div>
-            </div>
+            <h3 class="subsection-title">情绪分布（饼图）</h3>
+            <div ref="emotionPieChartRef" class="chart-container chart-container-large"></div>
           </div>
 
           <!-- 梦境类型分布 -->
           <div v-if="analysisData.mostCommonTypes && analysisData.mostCommonTypes.length > 0" class="analysis-detail-section">
-            <h3 class="subsection-title">梦境类型分布</h3>
-            <div class="type-distribution">
-              <div
-                v-for="[type, count] in analysisData.mostCommonTypes.slice(0, 10)"
-                :key="type"
-                class="type-item"
-              >
-                <span class="type-name">{{ type }}</span>
-                <span class="type-count">{{ count }}次</span>
-              </div>
-            </div>
+            <h3 class="subsection-title">梦境类型分布（柱状图）</h3>
+            <div ref="typeBarChartRef" class="chart-container"></div>
+          </div>
+
+          <!-- 梦境数量变化 -->
+          <div v-if="analysisData.stats && analysisData.stats.dailyDreamCounts && analysisData.stats.dailyDreamCounts.length > 0" class="analysis-detail-section">
+            <h3 class="subsection-title">梦境数量变化（折线图）</h3>
+            <div ref="lineChartRef" class="chart-container"></div>
           </div>
 
           <!-- 关键词词云 -->
           <div v-if="analysisData.stats && analysisData.stats.keywordStats && analysisData.stats.keywordStats.topKeywords && analysisData.stats.keywordStats.topKeywords.length > 0" class="analysis-detail-section">
             <h3 class="subsection-title">高频关键词</h3>
-            <div class="word-cloud">
+            <div class="simple-word-cloud">
               <span
-                v-for="keyword in analysisData.stats.keywordStats.topKeywords.slice(0, 30)"
+                v-for="keyword in analysisData.stats.keywordStats.topKeywords"
                 :key="keyword.text"
-                class="word-cloud-item"
+                class="word-tag"
                 :style="{
-                  fontSize: `${getKeywordSize(keyword.count)}px`,
+                  fontSize: `${12 + (keyword.count * 2)}px`,
                   opacity: 0.6 + (keyword.count / 10) * 0.4
                 }"
               >
                 {{ keyword.text }}
-                <small class="word-category">{{ getCategoryName(keyword.category) }}</small>
               </span>
             </div>
           </div>
@@ -543,6 +870,45 @@ onMounted(() => {
             <div class="meta-info-item">
               <span class="meta-label">梦境数量:</span>
               <span class="meta-value">{{ selectedAnalysis.DreamCount }} 个</span>
+            </div>
+          </div>
+
+          <!-- 图表展示 -->
+          <div v-if="getParsedStats(selectedAnalysis)" class="detail-charts">
+            <!-- 梦境数量变化 -->
+            <div v-if="getParsedStats(selectedAnalysis).dailyDreamCounts && getParsedStats(selectedAnalysis).dailyDreamCounts.length > 0" class="detail-chart-section">
+              <h4 class="detail-chart-title">梦境数量变化</h4>
+              <div ref="detailLineChartRef" class="chart-container"></div>
+            </div>
+
+            <!-- 情绪分布 -->
+            <div v-if="getParsedStats(selectedAnalysis).emotionStats && Object.keys(getParsedStats(selectedAnalysis).emotionStats).length > 0" class="detail-chart-section">
+              <h4 class="detail-chart-title">情绪分布</h4>
+              <div ref="detailEmotionPieChartRef" class="chart-container chart-container-large"></div>
+            </div>
+
+            <!-- 梦境类型分布 -->
+            <div v-if="getParsedStats(selectedAnalysis).typeStats && Object.keys(getParsedStats(selectedAnalysis).typeStats).length > 0" class="detail-chart-section">
+              <h4 class="detail-chart-title">梦境类型分布</h4>
+              <div ref="detailTypeBarChartRef" class="chart-container"></div>
+            </div>
+
+            <!-- 关键词词云 -->
+            <div v-if="getParsedStats(selectedAnalysis).keywordStats?.topKeywords && getParsedStats(selectedAnalysis).keywordStats.topKeywords.length > 0" class="detail-chart-section">
+              <h4 class="detail-chart-title">高频关键词</h4>
+              <div class="simple-word-cloud">
+                <span
+                  v-for="keyword in getParsedStats(selectedAnalysis).keywordStats.topKeywords"
+                  :key="keyword.text"
+                  class="word-tag"
+                  :style="{
+                    fontSize: `${12 + (keyword.count * 2)}px`,
+                    opacity: 0.6 + (keyword.count / 10) * 0.4
+                  }"
+                >
+                  {{ keyword.text }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1096,7 +1462,69 @@ onMounted(() => {
   margin: 0 0 var(--space-5) 0;
 }
 
-/* 情绪分布 */
+/* 图表容器 */
+.chart-container {
+  width: 100%;
+  height: 300px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.chart-container-large {
+  height: 400px;
+}
+
+/* 详情弹窗图表 */
+.detail-charts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.detail-chart-section {
+  background: var(--neutral-50);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+}
+
+.detail-chart-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--neutral-900);
+  margin: 0 0 var(--space-4) 0;
+}
+
+/* 旧的样式保留但不使用 */
+.simple-word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-xl);
+  min-height: 200px;
+  align-items: center;
+  justify-content: center;
+}
+
+.word-tag {
+  display: inline-block;
+  padding: var(--space-1_5) var(--space-3);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-semibold);
+  transition: all var(--transition-fast);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.word-tag:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgb(102 126 234 / 0.3);
+}
+
 .emotion-distribution {
   display: flex;
   flex-direction: column;
