@@ -107,9 +107,9 @@ def get_logs():
 
         # 计算总数
         count_sql = f"SELECT COUNT(*) as total FROM Logs{where_clause}"
-        with connection.cursor() as cursor:
-            cursor.execute(count_sql, params)
-            total = cursor.fetchone()['total']
+        with connection.cursor() as count_cursor:
+            count_cursor.execute(count_sql, params)
+            total = count_cursor.fetchone()['total']
 
         # 分页查询
         offset = (page - 1) * page_size
@@ -123,8 +123,9 @@ def get_logs():
             LIMIT %s OFFSET %s
         """
         params.extend([page_size, offset])
-        cursor.execute(sql, params)
-        logs = cursor.fetchall()
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            logs = cursor.fetchall()
 
         # 格式化时间
         for log in logs:
@@ -435,9 +436,9 @@ def get_public_dreams():
 
         # 计算总数
         count_sql = "SELECT COUNT(*) as total FROM Dreams WHERE IsPublic = TRUE"
-        with connection.cursor() as cursor:
-            cursor.execute(count_sql)
-            total = cursor.fetchone()['total']
+        with connection.cursor() as count_cursor:
+            count_cursor.execute(count_sql)
+            total = count_cursor.fetchone()['total']
 
         # 分页查询
         offset = (page - 1) * page_size
@@ -451,10 +452,11 @@ def get_public_dreams():
             ORDER BY d.DreamDate DESC, d.RecordTime DESC
             LIMIT %s OFFSET %s
         """
-        cursor.execute(sql, (page_size, offset))
-        dreams = cursor.fetchall()
+        with connection.cursor() as cursor:
+            cursor.execute(sql, (page_size, offset))
+            dreams = cursor.fetchall()
 
-        # 格式化日期时间
+        # 格式化日期时间并获取关联数据
         for dream in dreams:
             if dream['DreamDate']:
                 dream['DreamDate'] = dream['DreamDate'].isoformat()
@@ -462,22 +464,24 @@ def get_public_dreams():
                 dream['RecordTime'] = dream['RecordTime'].isoformat()
 
             # 获取情绪
-            cursor.execute("""
-                SELECT e.EmotionID, e.EmotionName, e.Color
-                FROM DreamEmotions de
-                JOIN Emotions e ON de.EmotionID = e.EmotionID
-                WHERE de.DreamID = %s
-            """, (dream['DreamID'],))
-            dream['Emotions'] = cursor.fetchall()
+            with connection.cursor() as emotion_cursor:
+                emotion_cursor.execute("""
+                    SELECT e.EmotionID, e.EmotionName, e.Color
+                    FROM DreamEmotions de
+                    JOIN Emotions e ON de.EmotionID = e.EmotionID
+                    WHERE de.DreamID = %s
+                """, (dream['DreamID'],))
+                dream['Emotions'] = emotion_cursor.fetchall()
 
             # 获取类型
-            cursor.execute("""
-                SELECT dt.TypeID, dt.TypeName, dt.Color
-                FROM DreamTypesRelation dtr
-                JOIN DreamTypes dt ON dtr.TypeID = dt.TypeID
-                WHERE dtr.DreamID = %s
-            """, (dream['DreamID'],))
-            dream['DreamTypes'] = cursor.fetchall()
+            with connection.cursor() as type_cursor:
+                type_cursor.execute("""
+                    SELECT dt.TypeID, dt.TypeName, dt.Color
+                    FROM DreamTypesRelation dtr
+                    JOIN DreamTypes dt ON dtr.TypeID = dt.TypeID
+                    WHERE dtr.DreamID = %s
+                """, (dream['DreamID'],))
+                dream['DreamTypes'] = type_cursor.fetchall()
 
         result = {
             'dreams': dreams,

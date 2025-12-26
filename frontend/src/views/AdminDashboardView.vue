@@ -419,7 +419,11 @@ const showDreamDetails = (dream) => {
 
 // ============ 通用 ============
 const goBack = () => {
-  router.push('/admin/login')
+  // 清除管理员token
+  localStorage.removeItem('adminToken')
+  localStorage.removeItem('adminEmail')
+  // 跳转到主登录页面
+  router.push('/')
 }
 
 const handleTabChange = (tab) => {
@@ -453,7 +457,7 @@ onMounted(() => {
         <div class="header-content">
           <button class="back-button" @click="goBack">
             <component :is="ArrowLeft" class="back-icon" />
-            <span>退出</span>
+            <span>退出登录</span>
           </button>
           <h1 class="page-title">管理后台</h1>
           <div style="width: 80px;"></div>

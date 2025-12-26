@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, signUp } from '../services/api'
+import { login, signUp, adminLogin } from '../services/api'
 import {
   DocumentAdd,
   DataAnalysis,
@@ -30,29 +30,64 @@ const registerForm = ref({
 // 当前活动标签
 const activeTab = ref('login')
 
+// 管理员模式
+const isAdminMode = ref(false)
+
+// 登录加载状态
+const loginLoading = ref(false)
+
+// 错误消息
+const loginError = ref('')
+
 // 登录函数
 const handleLogin = async () => {
-  try {
-    const response = await login(loginForm.value.email, loginForm.value.password)
-    console.log('登录响应:', response)
+  if (!loginForm.value.email || !loginForm.value.password) {
+    loginError.value = '请输入邮箱和密码'
+    return
+  }
 
-    if (response.Code === 200 || response.Code === 202) {
-      if (response.Token) {
-        localStorage.setItem('authToken', response.Token)
-        localStorage.setItem('userId', response.UserID)
-        if (response.Code === 202) {
-          localStorage.setItem('isAdmin', 'true')
-        } else {
-          localStorage.setItem('isAdmin', 'false')
-        }
+  loginLoading.value = true
+  loginError.value = ''
+
+  try {
+    let response
+    if (isAdminMode.value) {
+      // 管理员登录
+      response = await adminLogin(loginForm.value.email, loginForm.value.password)
+      console.log('管理员登录响应:', response)
+
+      if (response.Code === 200) {
+        localStorage.setItem('adminToken', response.Token)
+        localStorage.setItem('adminEmail', response.Email)
+        router.push('/admin/dashboard')
+        return
       }
-      router.push('/main/home')
     } else {
-      alert(`登录失败: ${response.Msg}`)
+      // 普通用户登录
+      response = await login(loginForm.value.email, loginForm.value.password)
+      console.log('登录响应:', response)
+
+      if (response.Code === 200 || response.Code === 202) {
+        if (response.Token) {
+          localStorage.setItem('authToken', response.Token)
+          localStorage.setItem('userId', response.UserID)
+          if (response.Code === 202) {
+            localStorage.setItem('isAdmin', 'true')
+          } else {
+            localStorage.setItem('isAdmin', 'false')
+          }
+        }
+        router.push('/main/home')
+        return
+      }
     }
+
+    loginError.value = response.Msg || '登录失败'
   } catch (error) {
     console.error('登录错误:', error)
-    alert('登录过程中发生错误')
+    loginError.value = '登录过程中发生错误'
+  } finally {
+    loginLoading.value = false
   }
 }
 
@@ -138,6 +173,24 @@ const register = async () => {
 
         <!-- 登录表单 -->
         <form v-if="activeTab === 'login'" @submit.prevent="handleLogin" class="form">
+          <!-- 管理员模式切换 -->
+          <div class="admin-mode-toggle">
+            <label class="toggle-label">
+              <input
+                type="checkbox"
+                v-model="isAdminMode"
+                class="toggle-checkbox"
+              />
+              <span class="toggle-slider"></span>
+              <span class="toggle-text">管理员模式</span>
+            </label>
+          </div>
+
+          <!-- 错误消息 -->
+          <div v-if="loginError" class="error-message">
+            {{ loginError }}
+          </div>
+
           <div class="form-group">
             <label for="login-email" class="form-label">邮箱地址</label>
             <div class="input-with-icon">
@@ -147,7 +200,7 @@ const register = async () => {
                 v-model="loginForm.email"
                 type="email"
                 required
-                placeholder="请输入邮箱地址"
+                :placeholder="isAdminMode ? '请输入管理员邮箱' : '请输入邮箱地址'"
                 class="spa-input"
               />
             </div>
@@ -168,9 +221,10 @@ const register = async () => {
             </div>
           </div>
 
-          <button type="submit" class="spa-button-primary submit-button">
-            登录账户
+          <button type="submit" class="spa-button-primary submit-button" :disabled="loginLoading">
+            {{ loginLoading ? '登录中...' : (isAdminMode ? '管理员登录' : '登录账户') }}
           </button>
+
         </form>
 
         <!-- 注册表单 -->
@@ -476,6 +530,109 @@ const register = async () => {
   background: var(--neutral-800);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+.spa-button-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 管理员模式切换 */
+.admin-mode-toggle {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  background: var(--neutral-300);
+  border-radius: 13px;
+  transition: all var(--transition-base);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle-checkbox:checked + .toggle-slider {
+  background: var(--neutral-900);
+}
+
+.toggle-checkbox:checked + .toggle-slider::before {
+  transform: translateX(22px);
+}
+
+.toggle-text {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--neutral-700);
+}
+
+/* 错误消息 */
+.error-message {
+  padding: var(--space-3);
+  background: var(--error-50);
+  color: var(--error-600);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  text-align: center;
+  margin-bottom: var(--space-4);
+  font-weight: var(--font-medium);
+}
+
+/* 管理员提示 */
+.admin-tips {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.tip-item {
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+  margin: var(--space-1) 0;
+  line-height: var(--leading-relaxed);
+}
+
+.tip-item:first-child {
+  margin-top: 0;
+}
+
+.tip-item:last-child {
+  margin-bottom: 0;
 }
 
 /* 响应式设计 */
