@@ -4,7 +4,7 @@ import hashlib
 
 from utils.status import Status
 from sql.database import get_db
-from sql.LogSql import GetClientIP, GetUserAgent
+from sql.LogSql import GetClientIP, GetUserAgent, LogAdminLoginSuccess, LogAdminLoginFailed
 from sql.UserSql import UserCheckLogin
 
 # 超级管理员配置
@@ -38,6 +38,10 @@ def before_request():
 def admin_login():
     """管理员登录"""
     try:
+        # 获取客户端信息用于日志记录
+        client_ip = GetClientIP(request)
+        user_agent = GetUserAgent(request)
+
         data = request.get_json()
         if not data or 'Email' not in data or 'Password' not in data:
             return jsonify(Status.ErrorRequest.ToResponse("参数不完整"))
@@ -47,15 +51,30 @@ def admin_login():
 
         # 验证管理员账号
         if email != AdminEmail:
+            # 记录登录失败日志
+            connection = get_db()
+            if not isinstance(connection, Status):
+                LogAdminLoginFailed(connection, email, client_ip, user_agent, "管理员账号不存在")
             return jsonify(Status.AuthFailed.ToResponse("管理员账号不存在"))
 
         # 验证密码
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         if password_hash != AdminPasswordHash:
+            # 记录登录失败日志
+            connection = get_db()
+            if not isinstance(connection, Status):
+                LogAdminLoginFailed(connection, email, client_ip, user_agent, "密码错误")
             return jsonify(Status.AuthFailed.ToResponse("密码错误"))
 
         # 创建token
         access_token = create_access_token(identity=email, additional_claims={'is_admin': True})
+
+        # 记录登录成功日志
+        connection = get_db()
+        if not isinstance(connection, Status):
+            log_status = LogAdminLoginSuccess(connection, email, client_ip, user_agent)
+            if log_status != Status.OK:
+                print(f"管理员登录日志记录失败: {email}")
 
         response = Status.OK.ToResponse("管理员登录成功")
         response['Token'] = access_token
@@ -127,10 +146,13 @@ def get_logs():
             cursor.execute(sql, params)
             logs = cursor.fetchall()
 
-        # 格式化时间
+        # 格式化时间并处理管理员显示
         for log in logs:
             if log['Timestamp']:
                 log['Timestamp'] = log['Timestamp'].isoformat()
+            # 如果 UserID 为 NULL，则是管理员操作
+            if log['UserID'] is None:
+                log['UserName'] = '管理员'
 
         result = {
             'logs': logs,

@@ -69,6 +69,28 @@ def LogLoginSuccess(connection, user_id: int, email: str, ip_address: str, user_
     }
     return LogUserAction(connection, user_id, 'login', action_description, ip_address, user_agent, additional_data)
 
+def LogAdminLoginSuccess(connection, email: str, ip_address: str, user_agent: str = None):
+    """记录管理员登录成功日志"""
+    action_description = f"管理员登录成功: {email}"
+    additional_data = {
+        "email": email,
+        "login_status": "success",
+        "user_type": "admin"
+    }
+    # 使用 -1 作为管理员的特殊ID
+    return LogUserAction(connection, -1, 'login', action_description, ip_address, user_agent, additional_data)
+
+def LogAdminLoginFailed(connection, email: str, ip_address: str, user_agent: str = None, error_reason: str = None):
+    """记录管理员登录失败日志"""
+    action_description = f"管理员登录失败: {email}"
+    additional_data = {
+        "email": email,
+        "login_status": "failed",
+        "error_reason": error_reason,
+        "user_type": "admin"
+    }
+    return LogUserAction(connection, -1, 'login', action_description, ip_address, user_agent, additional_data)
+
 def LogLoginFailed(connection, email: str, ip_address: str, user_agent: str = None, error_reason: str = None):
     """记录登录失败日志"""
     action_description = f"用户登录失败: {email}"
